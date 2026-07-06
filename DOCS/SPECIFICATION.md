@@ -197,8 +197,10 @@ wächst.
 
 ## 9. Zeit-Budget
 
-- Automat 1: Run-Dauer 60–90s, ~10 Runs bis Break (Durchschnitt) ≈ 10–15 Min,
-  danach Hallen-Upgrades/Freischaltung ≈ 10–15 Min. Summe ≈ 25–30 Min.
+- Automat 1: Run-Dauer 30s (verkürzt aus ursprünglich 60–90s — der erste Run
+  wurde als zu lang empfunden, siehe `config.ts`), ~10 Runs bis Break
+  (Durchschnitt) ≈ 5 Min, danach Hallen-Upgrades/Freischaltung ≈ 10–15 Min.
+  Summe ≈ 15–20 Min.
 - Automaten 2–8: Run-Dauer darf ansteigen (mehr Komplexität pro Genre),
   Ziel bleibt ≤ 30 Min pro Stufe. Feinjustierung erfolgt pro Automat separat,
   nicht durch reines Hochskalieren der Zahlen.

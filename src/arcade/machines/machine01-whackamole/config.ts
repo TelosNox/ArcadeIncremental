@@ -8,7 +8,11 @@ export const ZEIT_BONUS_REFERENCE_MS = 500;
 export const ZEIT_BONUS_MIN = 0.5;
 export const ZEIT_BONUS_MAX = 2;
 
-export const RUN_DURATION_MS = 60_000; // 60s initial (Abschnitt 4a / 9)
+// Verkürzt von ursprünglich 60s (Abschnitt 4a / 9) auf 30s, da der erste Run
+// als zu lang empfunden wurde. SPECIFICATION.md Abschnitt 9 entsprechend
+// angepasst. TODO: Falls in Phase 3 die Break-Schwelle (k_avg) kalibriert
+// wird, berücksichtigen, dass ein Run jetzt ~halb so viel Score liefert.
+export const RUN_DURATION_MS = 30_000;
 
 // Spezifikationslücke: SPECIFICATION.md beziffert nur "steigende Mole-
 // Erscheinungsrate im Verlauf eines Runs", ohne konkrete Werte. Sinnvolle

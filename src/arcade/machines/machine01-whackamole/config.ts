@@ -82,7 +82,15 @@ export const S_BREAK = 100;
 export const K_AVG = 9.1;
 export const SKILL_MULTIPLIER_MIN = 0.5; // exakt, Abschnitt 4 ("nach unten geclampt")
 // Spezifikationslücke: `m` ist in Abschnitt 4 nur narrativ beschrieben, keine
-// exakte Formel. Sinnvolle Annahme: m = durchschnittsScore / Baseline. Der
-// Baseline-Wert ist ein Platzhalter (wie k_avg ein Phase-7-Kalibrierungs-
-// kandidat), nicht aus echten Spieldaten hergeleitet.
-export const BASELINE_AVERAGE_SCORE_PER_RUN = 40;
+// exakte Formel. Sinnvolle Annahme: m = durchschnittsScore / Baseline.
+//
+// Der erste Wert (40) war deutlich zu niedrig angesetzt und ließ den Break
+// bereits nach 1-2 Runs auslösen: bei ~30s Rundendauer und Mole-Spawns alle
+// 500-1200ms entstehen rechnerisch ~37 Trefferchancen pro Run, was schon bei
+// durchschnittlichem Spiel (basis_punkte=10, zeit_bonus 0.5-2) leicht
+// 150-300+ Punkte pro Run ergibt — weit über der alten Baseline, also
+// m >> 1 statt der vorgesehenen ~1. 150 trifft die drei Beispielwerte aus
+// Abschnitt 4 (schwach ~20, Durchschnitt ~10, gut ~5 Runs) deutlich besser.
+// Weiterhin ein Platzhalter (wie k_avg ein Phase-7-Kalibrierungskandidat),
+// nicht aus echten Spieldaten hergeleitet.
+export const BASELINE_AVERAGE_SCORE_PER_RUN = 150;

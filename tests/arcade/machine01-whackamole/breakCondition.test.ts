@@ -7,16 +7,16 @@ import {
 import { Decimal } from '../../../src/core/BigNumber';
 
 describe('computeSkillMultiplier', () => {
-  it('returns 1 at the assumed baseline average score per run (40)', () => {
-    expect(computeSkillMultiplier(40)).toBe(1);
+  it('returns 1 at the assumed baseline average score per run (150)', () => {
+    expect(computeSkillMultiplier(150)).toBe(1);
   });
 
   it('scales linearly with average score above the baseline', () => {
-    expect(computeSkillMultiplier(80)).toBe(2);
+    expect(computeSkillMultiplier(300)).toBe(2);
   });
 
   it('clamps to the spec-mandated floor of 0.5 for weak performance', () => {
-    expect(computeSkillMultiplier(10)).toBe(0.5); // 10/40 = 0.25, geclampt auf 0.5
+    expect(computeSkillMultiplier(30)).toBe(0.5); // 30/150 = 0.2, geclampt auf 0.5
   });
 });
 
@@ -42,17 +42,23 @@ describe('hasReachedBreak', () => {
   });
 
   it('is false while the curve is still below S_break for an average player', () => {
-    // avg = 200/5 = 40 -> m = 1, score(5,1) ~= 63 < 100
-    expect(hasReachedBreak(5, new Decimal(200))).toBe(false);
+    // avg = 750/5 = 150 -> m = 1, score(5,1) ~= 63 < 100
+    expect(hasReachedBreak(5, new Decimal(750))).toBe(false);
   });
 
   it('is true once the curve crosses S_break for an average player', () => {
-    // avg = 480/12 = 40 -> m = 1, score(12,1) ~= 110 >= 100
-    expect(hasReachedBreak(12, new Decimal(480))).toBe(true);
+    // avg = 1800/12 = 150 -> m = 1, score(12,1) ~= 110 >= 100
+    expect(hasReachedBreak(12, new Decimal(1800))).toBe(true);
   });
 
   it('reaches break sooner for a skilled player (higher average score)', () => {
-    // avg = 400/5 = 80 -> m = 2, score(5,2) klar über 100
-    expect(hasReachedBreak(5, new Decimal(400))).toBe(true);
+    // avg = 1500/5 = 300 -> m = 2, score(5,2) klar über 100
+    expect(hasReachedBreak(5, new Decimal(1500))).toBe(true);
+  });
+
+  it('no longer breaks after only 2 runs for a merely competent player (Regressionstest)', () => {
+    // Vorher fälschlich schon bei ~200 Punkten/Run (m~5 statt ~1) ausgelöst.
+    // avg = 400/2 = 200 -> m = 1.33, score(2, 1.33) liegt klar unter S_break.
+    expect(hasReachedBreak(2, new Decimal(400))).toBe(false);
   });
 });

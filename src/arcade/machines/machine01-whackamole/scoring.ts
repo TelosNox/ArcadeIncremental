@@ -11,7 +11,10 @@ export function computeZeitBonus(reaktionszeitMs: number): number {
 }
 
 export function computeHitScore(reaktionszeitMs: number): Decimal {
-  return new Decimal(BASIS_PUNKTE).mul(computeZeitBonus(reaktionszeitMs));
+  // zeit_bonus ist ein Bruchwert (SPECIFICATION.md Abschnitt 4a) — Punkte
+  // sollen aber immer Ganzzahlen sein, deshalb hier runden statt erst am
+  // Run-Ende.
+  return new Decimal(BASIS_PUNKTE).mul(computeZeitBonus(reaktionszeitMs)).round();
 }
 
 export function computeMissPenalty(): Decimal {

@@ -32,6 +32,11 @@ describe('computeHitScore', () => {
     expect(computeHitScore(0).eq(20)).toBe(true);
     expect(computeHitScore(10_000).eq(5)).toBe(true);
   });
+
+  it('rounds to a whole number when the time bonus is fractional', () => {
+    // zeit_bonus(137) = 2 - 137/500 = 1.726 -> 10 * 1.726 = 17.26 -> 17
+    expect(computeHitScore(137).eq(17)).toBe(true);
+  });
 });
 
 describe('computeMissPenalty', () => {

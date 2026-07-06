@@ -37,6 +37,8 @@ function reduce(state: GameState, event: GameEvent): GameState {
       return { ...state, lastTickAt: event.timestamp };
     case 'hallCreditsAdded':
       return { ...state, hallCredits: state.hallCredits.add(event.amount) };
+    case 'runCompleted':
+      return { ...state, reflexPunkte: state.reflexPunkte.add(event.creditsEarned) };
     default: {
       const exhaustiveCheck: never = event;
       throw new Error(`Unbekannter Event-Typ: ${JSON.stringify(exhaustiveCheck)}`);

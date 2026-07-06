@@ -1,16 +1,17 @@
 import { Decimal, ZERO } from '../core/BigNumber';
 
-// Fundament-Zustand für Phase 1 (DOCS/IMPLEMENTATION_PLAN.md). Automaten-
-// spezifischer Zustand (Ressourcen, Upgrades pro Automat) kommt ab Phase 2
-// hinzu, sobald der erste Automat existiert.
+// Zustand ab Phase 2 (DOCS/IMPLEMENTATION_PLAN.md). Weitere Automaten-
+// Ressourcen kommen mit den jeweiligen Automaten hinzu (Phase 5/6).
 export interface GameState {
   hallCredits: Decimal;
+  reflexPunkte: Decimal; // Automat 1 (Whac-a-Mole), SPECIFICATION.md Abschnitt 3
   lastTickAt: number;
 }
 
 export function createInitialGameState(now: number = Date.now()): GameState {
   return {
     hallCredits: ZERO,
+    reflexPunkte: ZERO,
     lastTickAt: now,
   };
 }

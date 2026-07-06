@@ -2,10 +2,16 @@
 // migrations ist nach Ausgangsversion indiziert: migrations[fromVersion] hebt
 // einen Save von genau `fromVersion` auf `fromVersion + 1`.
 
-export const CURRENT_SAVE_VERSION = 1;
+export const CURRENT_SAVE_VERSION = 2;
+
+interface SerializedGameStateV1 {
+  hallCredits: string;
+  lastTickAt: number;
+}
 
 export interface SerializedGameState {
   hallCredits: string;
+  reflexPunkte: string;
   lastTickAt: number;
 }
 
@@ -17,8 +23,23 @@ export interface SaveFile {
 
 export type Migration = (oldState: unknown) => unknown;
 
-// Noch leer: Version 1 ist das erste Schema, es gibt nichts zu migrieren.
-export const migrations: readonly Migration[] = [];
+// v1 -> v2: Automat 1 (Whac-a-Mole) führt reflexPunkte als eigene Automaten-
+// Ressource ein (SPECIFICATION.md Abschnitt 3). Bestandssaves starten bei 0.
+function migrateV1ToV2(oldState: unknown): unknown {
+  return {
+    ...(oldState as SerializedGameStateV1),
+    reflexPunkte: '0',
+  };
+}
+
+// migrations[fromVersion] hebt einen Save von genau `fromVersion` auf
+// `fromVersion + 1`. Index 0 bleibt leer: es gab nie eine Version 0, das
+// erste jemals gespeicherte Schema war bereits Version 1.
+export const migrations: readonly Migration[] = (() => {
+  const steps: Migration[] = [];
+  steps[1] = migrateV1ToV2;
+  return steps;
+})();
 
 export type MigrationResult =
   | { ok: true; state: unknown; reachedVersion: number }

@@ -72,6 +72,7 @@ export class SaveManager {
 function serialize(state: GameState): SerializedGameState {
   return {
     hallCredits: state.hallCredits.toString(),
+    reflexPunkte: state.reflexPunkte.toString(),
     lastTickAt: state.lastTickAt,
   };
 }
@@ -79,6 +80,7 @@ function serialize(state: GameState): SerializedGameState {
 function deserialize(state: SerializedGameState): GameState {
   return {
     hallCredits: Decimal.fromString(state.hallCredits),
+    reflexPunkte: Decimal.fromString(state.reflexPunkte),
     lastTickAt: state.lastTickAt,
   };
 }

@@ -55,6 +55,7 @@ describe('SaveManager', () => {
   it('round-trips a saved state, including numbers beyond native precision', () => {
     const state = createInitialGameState(12345);
     state.hallCredits = new Decimal('1e50');
+    state.reflexPunkte = new Decimal('2e30');
     manager.save(state, 99999);
 
     const result = manager.load();
@@ -62,7 +63,24 @@ describe('SaveManager', () => {
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
       expect(result.state.hallCredits.eq(new Decimal('1e50'))).toBe(true);
+      expect(result.state.reflexPunkte.eq(new Decimal('2e30'))).toBe(true);
       expect(result.state.lastTickAt).toBe(12345);
+    }
+  });
+
+  it('migrates a v1 save (vor Einführung von reflexPunkte) auf das aktuelle Schema', () => {
+    storage.setItem(
+      SAVE_STORAGE_KEY,
+      JSON.stringify({ version: 1, savedAt: 1, state: { hallCredits: '10', lastTickAt: 500 } }),
+    );
+
+    const result = manager.load();
+
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.state.hallCredits.eq(10)).toBe(true);
+      expect(result.state.reflexPunkte.eq(0)).toBe(true);
+      expect(result.state.lastTickAt).toBe(500);
     }
   });
 

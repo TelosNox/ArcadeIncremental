@@ -60,4 +60,36 @@ describe('StateStore', () => {
 
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it('credits reflexPunkte on runCompleted events (Automat 1)', () => {
+    const store = new StateStore(createInitialGameState(0));
+
+    store.emit({
+      type: 'runCompleted',
+      machineId: 'machine01-whackamole',
+      score: new Decimal(85),
+      creditsEarned: new Decimal(17),
+    });
+
+    expect(store.getState().reflexPunkte.eq(17)).toBe(true);
+  });
+
+  it('accumulates reflexPunkte across multiple runs', () => {
+    const store = new StateStore(createInitialGameState(0));
+
+    store.emit({
+      type: 'runCompleted',
+      machineId: 'machine01-whackamole',
+      score: new Decimal(50),
+      creditsEarned: new Decimal(10),
+    });
+    store.emit({
+      type: 'runCompleted',
+      machineId: 'machine01-whackamole',
+      score: new Decimal(30),
+      creditsEarned: new Decimal(6),
+    });
+
+    expect(store.getState().reflexPunkte.eq(16)).toBe(true);
+  });
 });

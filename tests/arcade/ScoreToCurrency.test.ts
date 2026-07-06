@@ -11,7 +11,7 @@ describe('scoreToCredits', () => {
     expect(scoreToCredits(new Decimal(100), 5).eq(20)).toBe(true);
   });
 
-  it('clamps a negative score (viele Fehlklicks) to zero credits', () => {
+  it('clamps a negative score (viele Fehlversuche) to zero credits', () => {
     expect(scoreToCredits(new Decimal(-30), 5).eq(0)).toBe(true);
   });
 

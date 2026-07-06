@@ -14,7 +14,10 @@ export interface ScoreFormulaParams {
 }
 
 // Score-Formel (SPECIFICATION.md Abschnitt 4a):
-// score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (fehlklicks × strafe)
+// score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (verpasste_moles × strafe)
+// "Treffer" = Cursor kam in Reichweite einer aktiven Mole (Hover-Mechanik,
+// siehe WhackAMoleScene.checkHoverHits); "verpasste Mole" = despawnt ohne
+// Treffer (siehe WhackAMoleScene.spawnMole).
 
 export function computeZeitBonus(
   reaktionszeitMs: number,

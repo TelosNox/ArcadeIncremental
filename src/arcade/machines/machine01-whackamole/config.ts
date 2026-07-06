@@ -2,7 +2,7 @@
 // Abschnitt 4a.
 
 export const BASIS_PUNKTE = 10;
-export const STRAFE = 5; // pro Fehlklick auf ein leeres Loch
+export const STRAFE = 5; // pro Mole, die despawnt, ohne getroffen zu werden (Hover-Mechanik, siehe WhackAMoleScene)
 
 export const ZEIT_BONUS_REFERENCE_MS = 500;
 export const ZEIT_BONUS_MIN = 0.5;
@@ -50,8 +50,9 @@ export const SCHNELLERE_REFLEXE_MS_PER_LEVEL = 50;
 export const GROESSERER_HAMMER_COST_BASIS = 15;
 export const GROESSERER_HAMMER_COST_WACHSTUM = 1.15;
 // Spezifikationslücke: Effektstärke pro Level nicht beziffert ("größerer
-// Trefferradius, weniger Fehlklicks"). Wirkt nur auf die Klick-Erkennung,
-// nicht auf die Optik der Mole (kein finaler Asset-Anspruch, Abschnitt 11).
+// Trefferradius, weniger verpasste Moles"). Wirkt auf die Hover-Reichweite
+// (WhackAMoleScene.checkHoverHits), nicht auf die Optik der Mole (kein
+// finaler Asset-Anspruch, Abschnitt 11).
 export const GROESSERER_HAMMER_RADIUS_PX_PER_LEVEL = 8;
 
 export const SCORE_MULTIPLIKATOR_COST_BASIS = 20;
@@ -66,8 +67,8 @@ export const VERLAENGERTE_RUNDE_MAX_LEVEL = 3; // max. 3 Stufen (exakt, Abschnit
 export const FEHLERVERZEIHUNG_COST_BASIS = 12;
 export const FEHLERVERZEIHUNG_COST_WACHSTUM = 1.15;
 // Spezifikationslücke: Effektstärke/Untergrenze nicht beziffert ("reduziert
-// strafe pro Fehlklick"). Sinnvolle Annahme mit Floor, damit strafe nie auf 0
-// oder negativ fällt (sonst würden Fehlklicks irgendwann belohnt).
+// strafe pro verpasster Mole"). Sinnvolle Annahme mit Floor, damit strafe nie
+// auf 0 oder negativ fällt (sonst würden verpasste Moles irgendwann belohnt).
 export const FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL = 1;
 export const FEHLERVERZEIHUNG_STRAFE_MIN = 1;
 

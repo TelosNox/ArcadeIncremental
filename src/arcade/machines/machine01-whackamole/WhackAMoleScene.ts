@@ -83,10 +83,6 @@ export class WhackAMoleScene extends Phaser.Scene {
       this.holes.push({ x, y, background, mole, moleShownAt: null });
     }
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      this.handlePointerDown(pointer.x, pointer.y);
-    });
-
     this.statusText = this.add.text(20, 20, '', {
       fontFamily: 'monospace',
       fontSize: '20px',
@@ -94,10 +90,11 @@ export class WhackAMoleScene extends Phaser.Scene {
     });
 
     this.promptText = this.add
-      .text(GRID_CENTER_X, 560, 'Klicken zum Starten', {
+      .text(GRID_CENTER_X, 560, 'Maus über eine Mole bewegen zum Treffen\nKlicken zum Starten', {
         fontFamily: 'monospace',
-        fontSize: '24px',
+        fontSize: '22px',
         color: '#ffff88',
+        align: 'center',
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -148,6 +145,7 @@ export class WhackAMoleScene extends Phaser.Scene {
       this.spawnMole();
     }
 
+    this.checkHoverHits();
     this.updateStatusText();
   }
 
@@ -199,7 +197,7 @@ export class WhackAMoleScene extends Phaser.Scene {
     }
 
     this.promptText.setText(
-      `Run beendet — Score: ${formatNumber(this.score)} (${this.hits} Treffer, ${this.misses} Fehlklicks)\n` +
+      `Run beendet — Score: ${formatNumber(this.score)} (${this.hits} Treffer, ${this.misses} verpasste Moles)\n` +
         `+${formatNumber(creditsEarned)} Reflex-Punkte — Klicken für neuen Run`,
     );
     this.updateStatusText();
@@ -222,42 +220,56 @@ export class WhackAMoleScene extends Phaser.Scene {
     this.nextSpawnAt = this.time.now + interval;
 
     this.time.delayedCall(MOLE_VISIBLE_DURATION_MS, () => {
-      if (hole.moleShownAt !== null) {
-        hole.mole.setVisible(false);
-        hole.moleShownAt = null;
+      if (hole.moleShownAt === null) {
+        return; // wurde schon per Hover getroffen
+      }
+      hole.mole.setVisible(false);
+      hole.moleShownAt = null;
+      if (this.effectiveParams) {
+        // Despawn ohne Treffer zählt als verpasste Mole (siehe Klassen-
+        // Kommentar zu checkHoverHits/Hover-Mechanik).
+        this.score = applyMiss(this.score, this.effectiveParams);
+        this.misses += 1;
+        this.showMissFeedback(hole.x, hole.y);
+        this.updateStatusText();
       }
     });
   }
 
-  private handlePointerDown(x: number, y: number): void {
-    if (this.uiState.getState() !== 'playing' || !this.effectiveParams) {
+  // Hover-Mechanik statt Klick: Ab dem Moment, in dem der Cursor in Reichweite
+  // (Basisradius + Größerer-Hammer-Bonus) einer aktiven Mole ist, zählt das
+  // als Treffer. Grund: Sobald der Radius groß genug wird, würde ein
+  // klick-basiertes Treffen/Verfehlen keine räumliche Zielgenauigkeit mehr
+  // testen (das Upgrade würde das Klicken selbst sinnlos machen) — Hover
+  // macht "in Reichweite sein" zur eigentlichen Fähigkeit, die das Upgrade
+  // ausbaut, und bleibt aktives Spielen (Cursor muss aktiv zur richtigen von
+  // 9 Positionen bewegt werden). Ein "Fehlklick" gibt es dadurch nicht mehr;
+  // die Strafe wird stattdessen fällig, wenn eine Mole unangetastet despawnt
+  // (siehe spawnMole()).
+  private checkHoverHits(): void {
+    if (!this.effectiveParams) {
       return;
     }
-
+    const pointer = this.input.activePointer;
     const effectiveRadius = HOLE_RADIUS + this.effectiveParams.hitRadiusBonusPx;
-    const hole = this.holes.find((candidate) => {
-      const dx = candidate.x - x;
-      const dy = candidate.y - y;
-      return dx * dx + dy * dy <= effectiveRadius * effectiveRadius;
-    });
-    if (!hole) {
-      return; // Klick daneben zählt nicht als Fehlklick (nur Klicks auf ein Loch)
-    }
 
-    if (hole.moleShownAt !== null) {
+    for (const hole of this.holes) {
+      if (hole.moleShownAt === null) {
+        continue;
+      }
+      const dx = hole.x - pointer.x;
+      const dy = hole.y - pointer.y;
+      if (dx * dx + dy * dy > effectiveRadius * effectiveRadius) {
+        continue;
+      }
+
       const reaktionszeitMs = this.time.now - hole.moleShownAt;
       this.score = applyHit(this.score, reaktionszeitMs, this.effectiveParams);
       this.hits += 1;
       hole.mole.setVisible(false);
       hole.moleShownAt = null;
       this.showHitFeedback(hole, reaktionszeitMs);
-    } else {
-      this.score = applyMiss(this.score, this.effectiveParams);
-      this.misses += 1;
-      this.showMissFeedback(x, y);
     }
-
-    this.updateStatusText();
   }
 
   // Rein visuelles Feedback (keine Sound-Effekte, SPECIFICATION.md Abschnitt

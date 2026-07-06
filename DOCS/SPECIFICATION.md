@@ -85,16 +85,28 @@ Nichtstun nie erreicht werden — es gibt keinen Idle-Pfad zum Break.
 
 **Score-Formel:**
 ```
-score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (fehlklicks × strafe)
+score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (verpasste_moles × strafe)
 
 basis_punkte = 10
 zeit_bonus   = clamp(2 − reaktionszeit_ms / 500, 0.5, 2)
-strafe       = 5   // pro Fehlklick auf ein leeres Loch
+strafe       = 5   // pro Mole, die despawnt, ohne getroffen zu werden
 ```
 Run-Dauer **30s** (reduziert von ursprünglich geplanten 60s — 60s fühlte
 sich im Playtesting zu lang an, Spieler verlor die Motivation), mit
 steigender Mole-Erscheinungsrate im Verlauf eines Runs
 (Schwierigkeits-Ramp innerhalb des Runs).
+
+> **Hinweis:** Interaktion ist Hover statt Klick — sobald der Cursor in
+> Reichweite (Basisradius + "Größerer Hammer"-Bonus) einer aktiven Mole
+> ist, zählt das als Treffer (`reaktionszeit_ms` = Zeit vom Erscheinen bis
+> zum ersten Erreichen der Reichweite). Grund: Ein klick-basiertes
+> Treffen/Verfehlen würde ab einem gewissen Hammer-Radius keine räumliche
+> Zielgenauigkeit mehr testen und das Upgrade würde Klicks komplett
+> entwerten. Dadurch gibt es keinen "Fehlklick" mehr — die Strafe wird
+> stattdessen fällig, wenn eine Mole ihr Sichtbarkeitsfenster verpasst
+> (despawnt, ohne dass der Cursor in Reichweite kam). Das bleibt aktives
+> Spielen: der Cursor muss aktiv zur richtigen von 9 Positionen bewegt
+> werden.
 
 > **Hinweis (vorläufig):** `k_avg = 9.1` in Abschnitt 4 war implizit auf
 > 60s Run-Dauer kalibriert. Bei 30s halbiert sich grob die Anzahl der
@@ -114,10 +126,10 @@ SCORE_TO_CREDITS_DIVISOR = 5   // Konstante in config/balance.ts
 | Upgrade | Effekt | Kosten (`basis × wachstum^level`) |
 |---|---|---|
 | Schnellere Reflexe | vergrößert Zeitfenster für hohen `zeit_bonus` | 10 × 1.15^lvl |
-| Größerer Hammer | größerer Trefferradius, weniger Fehlklicks | 15 × 1.15^lvl |
+| Größerer Hammer | größere Hover-Reichweite, weniger verpasste Moles | 15 × 1.15^lvl |
 | Score-Multiplikator | +10 % Score pro Stufe | 20 × 1.2^lvl |
 | Verlängerte Runde | +5s Run-Dauer, max. 3 Stufen | 25 × 1.25^lvl |
-| Fehlerverzeihung | reduziert `strafe` pro Fehlklick | 12 × 1.15^lvl |
+| Fehlerverzeihung | reduziert `strafe` pro verpasster Mole | 12 × 1.15^lvl |
 
 **Design-Entscheidung:** Upgrades sind überwiegend **Gameplay-Upgrades**
 (Trefferradius, Zeitfenster, Run-Dauer), nur der Score-Multiplikator ist ein

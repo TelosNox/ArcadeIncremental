@@ -54,7 +54,7 @@ export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
     name: 'Größerer Hammer',
     costBasis: GROESSERER_HAMMER_COST_BASIS,
     costWachstum: GROESSERER_HAMMER_COST_WACHSTUM,
-    describeEffect: (level) => `Trefferradius +${level * GROESSERER_HAMMER_RADIUS_PX_PER_LEVEL}px`,
+    describeEffect: (level) => `Hover-Reichweite +${level * GROESSERER_HAMMER_RADIUS_PX_PER_LEVEL}px`,
   },
   {
     id: 'scoreMultiplikator',
@@ -77,7 +77,7 @@ export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
     costBasis: FEHLERVERZEIHUNG_COST_BASIS,
     costWachstum: FEHLERVERZEIHUNG_COST_WACHSTUM,
     describeEffect: (level) =>
-      `Fehlklick-Strafe -${level * FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL} (min. ${FEHLERVERZEIHUNG_STRAFE_MIN})`,
+      `Strafe pro verpasster Mole -${level * FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL} (min. ${FEHLERVERZEIHUNG_STRAFE_MIN})`,
   },
 ];
 

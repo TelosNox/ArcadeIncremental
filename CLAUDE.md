@@ -48,6 +48,12 @@ lesen.
 - Neue Formeln (Score-, Wachstums-, Kostenberechnungen) immer mit einem
   kurzen Kommentar, der auf den entsprechenden Abschnitt in
   `DOCS/SPECIFICATION.md` verweist
+- Punkte-/Ressourcenwerte (Score, Automaten-Ressourcen, Hallen-Credits)
+  werden ganzzahlig gerechnet und angezeigt: Formeln runden auf eine
+  Ganzzahl, spätestens bevor der Wert in den Store geschrieben wird. Für
+  die Anzeige im UI immer `formatNumber()` (`src/ui/formatNumber.ts`)
+  verwenden statt rohem `toString()` auf `Decimal`-Werten — verhindert
+  Fließkomma-Reste in der Anzeige bei jedem neuen Automaten
 
 ## Tests
 

@@ -91,8 +91,17 @@ basis_punkte = 10
 zeit_bonus   = clamp(2 − reaktionszeit_ms / 500, 0.5, 2)
 strafe       = 5   // pro Fehlklick auf ein leeres Loch
 ```
-Run-Dauer initial 60s, mit steigender Mole-Erscheinungsrate im Verlauf eines
-Runs (Schwierigkeits-Ramp innerhalb des Runs).
+Run-Dauer **30s** (reduziert von ursprünglich geplanten 60s — 60s fühlte
+sich im Playtesting zu lang an, Spieler verlor die Motivation), mit
+steigender Mole-Erscheinungsrate im Verlauf eines Runs
+(Schwierigkeits-Ramp innerhalb des Runs).
+
+> **Hinweis (vorläufig):** `k_avg = 9.1` in Abschnitt 4 war implizit auf
+> 60s Run-Dauer kalibriert. Bei 30s halbiert sich grob die Anzahl der
+> Trefferchancen pro Run, wodurch vermutlich mehr Runs bis zum Break nötig
+> sind als die dort genannten ~10. Der Wert bleibt bewusst unverändert,
+> bis im Balancing-Pass (Phase 7) echte Spieldaten zur Neukalibrierung
+> vorliegen — nicht jetzt blind neu schätzen.
 
 **Score-zu-Credits-Umrechnung:**
 ```
@@ -197,10 +206,11 @@ wächst.
 
 ## 9. Zeit-Budget
 
-- Automat 1: Run-Dauer 30s (verkürzt aus ursprünglich 60–90s — der erste Run
-  wurde als zu lang empfunden, siehe `config.ts`), ~10 Runs bis Break
-  (Durchschnitt) ≈ 5 Min, danach Hallen-Upgrades/Freischaltung ≈ 10–15 Min.
-  Summe ≈ 15–20 Min.
+- Automat 1: Run-Dauer 30s (siehe Abschnitt 4a), Run-Zahl bis Break noch
+  nicht neu vermessen (ursprüngliche Kalibrierung ~10 Runs bezog sich auf
+  60s-Runs) — wird im Playtesting beobachtet und in Phase 7 nachkalibriert.
+  Danach Hallen-Upgrades/Freischaltung ≈ 10–15 Min. Gesamtzeit pro Stufe
+  hängt an der noch ausstehenden Nachkalibrierung, Ziel bleibt ≤ 30 Min.
 - Automaten 2–8: Run-Dauer darf ansteigen (mehr Komplexität pro Genre),
   Ziel bleibt ≤ 30 Min pro Stufe. Feinjustierung erfolgt pro Automat separat,
   nicht durch reines Hochskalieren der Zahlen.

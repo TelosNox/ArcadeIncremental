@@ -104,6 +104,8 @@ etc.) — keine Magic Numbers verstreut im Code.
 
 ### Phase 2 — Automat 1: Whac-a-Mole (Blind-Phase)
 - `WhackAMoleScene` als Phaser-Scene
+- Run-Dauer 30s (siehe `DOCS/SPECIFICATION.md` Abschnitt 4a — reduziert
+  aus Playtesting-Gründen, `k_avg` noch nicht neu kalibriert)
 - Score-Berechnung aus Reaktionszeit/Treffern
 - Run-Ende → Event an Store → Credits-Umrechnung → lokale Upgrades
 - Upgrade-Panel (UI) zwischen den Runs

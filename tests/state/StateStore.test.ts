@@ -92,4 +92,69 @@ describe('StateStore', () => {
 
     expect(store.getState().reflexPunkte.eq(16)).toBe(true);
   });
+
+  it('tracks machine01RunCount and machine01TotalScore on runCompleted', () => {
+    const store = new StateStore(createInitialGameState(0));
+
+    store.emit({
+      type: 'runCompleted',
+      machineId: 'machine01-whackamole',
+      score: new Decimal(40),
+      creditsEarned: new Decimal(8),
+    });
+    store.emit({
+      type: 'runCompleted',
+      machineId: 'machine01-whackamole',
+      score: new Decimal(-10),
+      creditsEarned: new Decimal(0),
+    });
+
+    expect(store.getState().machine01RunCount).toBe(2);
+    expect(store.getState().machine01TotalScore.eq(30)).toBe(true);
+  });
+
+  describe('machine01UpgradePurchased', () => {
+    it('deducts the cost and increments the level when affordable', () => {
+      const initial = createInitialGameState(0);
+      initial.reflexPunkte = new Decimal(100);
+      const store = new StateStore(initial);
+
+      store.emit({ type: 'machine01UpgradePurchased', upgradeId: 'schnellereReflexe' });
+
+      // Kosten für Level 0 -> 1: 10 * 1.15^0 = 10
+      expect(store.getState().reflexPunkte.eq(90)).toBe(true);
+      expect(store.getState().machine01Upgrades.schnellereReflexe).toBe(1);
+    });
+
+    it('ignores the purchase when reflexPunkte is insufficient (kein Minus-Guthaben)', () => {
+      const initial = createInitialGameState(0);
+      initial.reflexPunkte = new Decimal(5);
+      const store = new StateStore(initial);
+
+      store.emit({ type: 'machine01UpgradePurchased', upgradeId: 'schnellereReflexe' });
+
+      expect(store.getState().reflexPunkte.eq(5)).toBe(true);
+      expect(store.getState().machine01Upgrades.schnellereReflexe).toBe(0);
+    });
+
+    it('ignores the purchase once the upgrade-specific max level is reached', () => {
+      const initial = createInitialGameState(0);
+      initial.reflexPunkte = new Decimal(100_000);
+      initial.machine01Upgrades = { ...initial.machine01Upgrades, verlaengerteRunde: 3 };
+      const store = new StateStore(initial);
+
+      store.emit({ type: 'machine01UpgradePurchased', upgradeId: 'verlaengerteRunde' });
+
+      expect(store.getState().machine01Upgrades.verlaengerteRunde).toBe(3);
+      expect(store.getState().reflexPunkte.eq(100_000)).toBe(true);
+    });
+  });
+
+  it('sets machine01HasBroken on machine01BreakTriggered', () => {
+    const store = new StateStore(createInitialGameState(0));
+
+    store.emit({ type: 'machine01BreakTriggered' });
+
+    expect(store.getState().machine01HasBroken).toBe(true);
+  });
 });

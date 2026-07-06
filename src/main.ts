@@ -63,6 +63,47 @@ store.subscribe((state) => {
   }
 });
 
+// Auto-Save: bisher gab es nur das manuelle window.arcadeDebug.save() für die
+// Konsole, wodurch jeder Seiten-Reload ungespeicherten Fortschritt (z. B.
+// gerade gekaufte Upgrades) verwarf. lastPersisted trackt die Felder, die
+// tatsächlich im Save landen (siehe persistence/schema.ts) — nur bei
+// tatsächlicher Änderung neu speichern, nicht bei den ~60/s Tick-Events.
+let lastPersisted = {
+  hallCredits: store.getState().hallCredits,
+  reflexPunkte: store.getState().reflexPunkte,
+  machine01Upgrades: store.getState().machine01Upgrades,
+  machine01RunCount: store.getState().machine01RunCount,
+  machine01TotalScore: store.getState().machine01TotalScore,
+  machine01HasBroken: store.getState().machine01HasBroken,
+};
+store.subscribe((state) => {
+  const changed =
+    state.hallCredits !== lastPersisted.hallCredits ||
+    state.reflexPunkte !== lastPersisted.reflexPunkte ||
+    state.machine01Upgrades !== lastPersisted.machine01Upgrades ||
+    state.machine01RunCount !== lastPersisted.machine01RunCount ||
+    state.machine01TotalScore !== lastPersisted.machine01TotalScore ||
+    state.machine01HasBroken !== lastPersisted.machine01HasBroken;
+  if (!changed) {
+    return;
+  }
+  lastPersisted = {
+    hallCredits: state.hallCredits,
+    reflexPunkte: state.reflexPunkte,
+    machine01Upgrades: state.machine01Upgrades,
+    machine01RunCount: state.machine01RunCount,
+    machine01TotalScore: state.machine01TotalScore,
+    machine01HasBroken: state.machine01HasBroken,
+  };
+  saveManager.save(state);
+});
+
+// Sicherheitsnetz für alles, was der obige Vergleich übersehen könnte (z. B.
+// künftige GameState-Felder, die vergessen werden in die Liste aufzunehmen).
+window.addEventListener('beforeunload', () => {
+  saveManager.save(store.getState());
+});
+
 declare global {
   interface Window {
     arcadeDebug: {

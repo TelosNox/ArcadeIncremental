@@ -5,13 +5,22 @@ import type { ArcadeBridge } from '../../PhaserBridge';
 import { scoreToCredits } from '../../shared/ScoreToCurrency';
 import { formatNumber } from '../../../ui/formatNumber';
 import {
+  FEEDBACK_RISE_DISTANCE_PX,
+  HIT_FEEDBACK_DURATION_MS,
   HOLE_COUNT,
+  MISS_COLOR,
+  MISS_FEEDBACK_DURATION_MS,
+  MISS_FLASH_DURATION_MS,
   MOLE_SPAWN_INTERVAL_END_MS,
   MOLE_SPAWN_INTERVAL_START_MS,
   MOLE_VISIBLE_DURATION_MS,
+  NORMAL_HIT_COLOR,
+  PERFECT_HIT_COLOR,
+  PERFEKT_ZEIT_BONUS_THRESHOLD,
+  PUNCH_TWEEN_DURATION_MS,
   RUN_DURATION_MS,
 } from './config';
-import { applyHit, applyMiss } from './scoring';
+import { applyHit, applyMiss, computeHitScore, computeMissPenalty, computeZeitBonus } from './scoring';
 
 // Reine Layout-Werte fürs Platzhalter-Grid, keine Balance-Konstanten
 // (Nicht-Ziele, SPECIFICATION.md Abschnitt 11: keine finalen Assets nötig).
@@ -29,6 +38,10 @@ interface HoleView {
   background: Phaser.GameObjects.Arc;
   mole: Phaser.GameObjects.Arc;
   moleShownAt: number | null;
+}
+
+function colorToCss(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`;
 }
 
 export class WhackAMoleScene extends Phaser.Scene {
@@ -195,12 +208,68 @@ export class WhackAMoleScene extends Phaser.Scene {
       this.hits += 1;
       hole.mole.setVisible(false);
       hole.moleShownAt = null;
+      this.showHitFeedback(hole, reaktionszeitMs);
     } else {
       this.score = applyMiss(this.score);
       this.misses += 1;
+      this.showMissFeedback(x, y);
     }
 
     this.updateStatusText();
+  }
+
+  // Rein visuelles Feedback (keine Sound-Effekte, SPECIFICATION.md Abschnitt
+  // 11 Nicht-Ziele). Farbe/Label-Staffelung nach zeit_bonus ist in
+  // SPECIFICATION.md nicht vorgegeben, sinnvolle Annahme (siehe config.ts).
+  private showHitFeedback(hole: HoleView, reaktionszeitMs: number): void {
+    this.tweens.add({
+      targets: hole.mole,
+      scale: 1.35,
+      duration: PUNCH_TWEEN_DURATION_MS,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+    });
+
+    const zeitBonus = computeZeitBonus(reaktionszeitMs);
+    const isPerfect = zeitBonus >= PERFEKT_ZEIT_BONUS_THRESHOLD;
+    const hitScore = computeHitScore(reaktionszeitMs);
+    const label = isPerfect ? `Perfekt +${formatNumber(hitScore)}` : `+${formatNumber(hitScore)}`;
+    const color = isPerfect ? PERFECT_HIT_COLOR : NORMAL_HIT_COLOR;
+
+    this.spawnFloatingText(hole.x, hole.y - HOLE_RADIUS, label, color, HIT_FEEDBACK_DURATION_MS);
+  }
+
+  private showMissFeedback(x: number, y: number): void {
+    const flash = this.add.circle(x, y, HOLE_RADIUS * 0.5, MISS_COLOR, 0.6);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 1.6,
+      duration: MISS_FLASH_DURATION_MS,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    });
+
+    this.spawnFloatingText(x, y, `-${formatNumber(computeMissPenalty())}`, MISS_COLOR, MISS_FEEDBACK_DURATION_MS);
+  }
+
+  private spawnFloatingText(x: number, y: number, label: string, color: number, durationMs: number): void {
+    const text = this.add
+      .text(x, y, label, {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        color: colorToCss(color),
+      })
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: text,
+      y: y - FEEDBACK_RISE_DISTANCE_PX,
+      alpha: 0,
+      duration: durationMs,
+      ease: 'Quad.easeOut',
+      onComplete: () => text.destroy(),
+    });
   }
 
   private updateStatusText(): void {

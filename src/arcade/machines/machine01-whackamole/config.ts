@@ -17,3 +17,19 @@ export const HOLE_COUNT = 9;
 export const MOLE_SPAWN_INTERVAL_START_MS = 1200;
 export const MOLE_SPAWN_INTERVAL_END_MS = 500;
 export const MOLE_VISIBLE_DURATION_MS = 900;
+
+// Trefferfeedback (rein visuell, kein Balance-Wert aus der Spezifikation):
+// Ab diesem zeit_bonus (Bereich 0.5-2, siehe oben) gilt ein Treffer als
+// "Perfekt" und bekommt auffälligeres Feedback. Sinnvolle Annahme, keine
+// Vorgabe in SPECIFICATION.md.
+export const PERFEKT_ZEIT_BONUS_THRESHOLD = 1.5;
+
+export const PERFECT_HIT_COLOR = 0xffd54a;
+export const NORMAL_HIT_COLOR = 0x9fd89f;
+export const MISS_COLOR = 0xdd4444;
+
+export const HIT_FEEDBACK_DURATION_MS = 450;
+export const MISS_FEEDBACK_DURATION_MS = 450;
+export const PUNCH_TWEEN_DURATION_MS = 90;
+export const MISS_FLASH_DURATION_MS = 200;
+export const FEEDBACK_RISE_DISTANCE_PX = 60;

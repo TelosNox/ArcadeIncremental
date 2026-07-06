@@ -3,6 +3,7 @@ import { SCORE_TO_CREDITS_DIVISOR } from '../../../config/balance';
 import { Decimal, ZERO } from '../../../core/BigNumber';
 import type { ArcadeBridge } from '../../PhaserBridge';
 import { scoreToCredits } from '../../shared/ScoreToCurrency';
+import { formatNumber } from '../../../ui/formatNumber';
 import {
   HOLE_COUNT,
   MOLE_SPAWN_INTERVAL_END_MS,
@@ -146,8 +147,8 @@ export class WhackAMoleScene extends Phaser.Scene {
 
     this.promptText
       .setText(
-        `Run beendet — Score: ${this.score.toString()} (${this.hits} Treffer, ${this.misses} Fehlklicks)\n` +
-          `+${creditsEarned.toString()} Reflex-Punkte — Klicken für neuen Run`,
+        `Run beendet — Score: ${formatNumber(this.score)} (${this.hits} Treffer, ${this.misses} Fehlklicks)\n` +
+          `+${formatNumber(creditsEarned)} Reflex-Punkte — Klicken für neuen Run`,
       )
       .setVisible(true);
     this.updateStatusText();
@@ -205,6 +206,6 @@ export class WhackAMoleScene extends Phaser.Scene {
   private updateStatusText(): void {
     const secondsLeft = this.phase === 'playing' ? Math.ceil(this.remainingMs / 1000) : 0;
     const timerLabel = this.phase === 'playing' ? `  |  Zeit: ${secondsLeft}s` : '';
-    this.statusText.setText(`Score: ${this.score.toString()}${timerLabel}`);
+    this.statusText.setText(`Score: ${formatNumber(this.score)}${timerLabel}`);
   }
 }

@@ -6,6 +6,7 @@ import { GameLoop } from './core/GameLoop';
 import { SaveManager } from './persistence/SaveManager';
 import { createInitialGameState } from './state/GameState';
 import { StateStore } from './state/StateStore';
+import { formatNumber } from './ui/formatNumber';
 
 // Phase 1: Idle-Kern-Fundament. Lädt beim Start einen vorhandenen Save und
 // verdrahtet GameLoop-Ticks in den StateStore.
@@ -43,11 +44,11 @@ let lastLoggedReflexPunkte = store.getState().reflexPunkte;
 store.subscribe((state) => {
   if (!state.hallCredits.eq(lastLoggedCredits)) {
     lastLoggedCredits = state.hallCredits;
-    console.log(`[StateStore] hallCredits = ${state.hallCredits.toString()}`);
+    console.log(`[StateStore] hallCredits = ${formatNumber(state.hallCredits)}`);
   }
   if (!state.reflexPunkte.eq(lastLoggedReflexPunkte)) {
     lastLoggedReflexPunkte = state.reflexPunkte;
-    console.log(`[StateStore] reflexPunkte = ${state.reflexPunkte.toString()}`);
+    console.log(`[StateStore] reflexPunkte = ${formatNumber(state.reflexPunkte)}`);
   }
 });
 

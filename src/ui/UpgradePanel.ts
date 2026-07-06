@@ -1,4 +1,6 @@
 import { getUpgradeCost, getUpgradeMaxLevel, UPGRADE_DEFINITIONS } from '../arcade/machines/machine01-whackamole/upgrades';
+import type { Decimal } from '../core/BigNumber';
+import type { Machine01UpgradeLevels } from '../state/GameState';
 import type { StateStore } from '../state/StateStore';
 import { formatNumber } from './formatNumber';
 import type { UIStateController } from './UIState';
@@ -11,11 +13,17 @@ import type { UIStateController } from './UIState';
 export class UpgradePanel {
   private readonly root: HTMLDivElement;
   private readonly cardsContainer: HTMLDivElement;
+  private lastReflexPunkte: Decimal;
+  private lastUpgrades: Machine01UpgradeLevels;
 
   constructor(
     private readonly store: StateStore,
     private readonly uiState: UIStateController,
   ) {
+    const initialState = store.getState();
+    this.lastReflexPunkte = initialState.reflexPunkte;
+    this.lastUpgrades = initialState.machine01Upgrades;
+
     this.root = document.createElement('div');
     this.root.style.cssText =
       'position:fixed; inset:0; display:none; align-items:center; justify-content:center; ' +
@@ -50,7 +58,17 @@ export class UpgradePanel {
         this.render();
       }
     });
-    this.store.subscribe(() => {
+    this.store.subscribe((state) => {
+      // Der Store feuert bei jedem Event, auch bei den ~60/s Tick-Events des
+      // GameLoop. Ohne diesen Guard würde render() den kompletten
+      // Button-Baum ständig neu aufbauen, während das Panel offen ist —
+      // ein Klick (mousedown+mouseup auf demselben Element) trifft dann oft
+      // ein bereits ersetztes Element und wird nie als "click" ausgelöst.
+      if (state.reflexPunkte === this.lastReflexPunkte && state.machine01Upgrades === this.lastUpgrades) {
+        return;
+      }
+      this.lastReflexPunkte = state.reflexPunkte;
+      this.lastUpgrades = state.machine01Upgrades;
       if (this.uiState.getState() === 'upgrade') {
         this.render();
       }

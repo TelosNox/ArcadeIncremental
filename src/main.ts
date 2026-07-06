@@ -7,6 +7,9 @@ import { SaveManager } from './persistence/SaveManager';
 import { createInitialGameState } from './state/GameState';
 import { StateStore } from './state/StateStore';
 import { formatNumber } from './ui/formatNumber';
+import { RevealSequence } from './ui/RevealSequence';
+import { UIStateController } from './ui/UIState';
+import { UpgradePanel } from './ui/UpgradePanel';
 
 // Phase 1: Idle-Kern-Fundament. Lädt beim Start einen vorhandenen Save und
 // verdrahtet GameLoop-Ticks in den StateStore.
@@ -25,9 +28,14 @@ loop.onTick((deltaMs, timestamp) => {
 });
 loop.start();
 
-// Phase 2: Automat 1 (Whac-a-Mole), noch ohne Upgrades/Break-Logik. Die
-// Scene kennt den StateStore nicht direkt, sondern meldet Runs ausschließlich
-// über die ArcadeBridge (CLAUDE.md, Architektur-Regel 1).
+// Phase 2/3: Automat 1 (Whac-a-Mole) mit Upgrades, Break-Bedingung und
+// Reveal-Platzhalter (noch ohne passive Automatisierung/Effizienz-Anzeige —
+// das bleibt Phase 3). Die Scene kennt den StateStore nicht direkt, sondern
+// liest/schreibt ausschließlich über die ArcadeBridge (CLAUDE.md,
+// Architektur-Regel 1). UpgradePanel/RevealSequence sind DOM-Overlays und
+// bekommen den Store direkt (wie main.ts selbst weiter unten), da sie keine
+// Phaser-Scene sind und Regel 1 nicht für sie gilt.
+const uiState = new UIStateController();
 const bridge = createArcadeBridge(store);
 
 new Phaser.Game({
@@ -36,8 +44,11 @@ new Phaser.Game({
   width: 800,
   height: 600,
   backgroundColor: '#1a1a1a',
-  scene: new WhackAMoleScene(bridge),
+  scene: new WhackAMoleScene(bridge, uiState),
 });
+
+new UpgradePanel(store, uiState);
+new RevealSequence(uiState);
 
 let lastLoggedCredits = store.getState().hallCredits;
 let lastLoggedReflexPunkte = store.getState().reflexPunkte;

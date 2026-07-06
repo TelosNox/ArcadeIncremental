@@ -56,6 +56,16 @@ describe('SaveManager', () => {
     const state = createInitialGameState(12345);
     state.hallCredits = new Decimal('1e50');
     state.reflexPunkte = new Decimal('2e30');
+    state.machine01Upgrades = {
+      schnellereReflexe: 2,
+      groessererHammer: 1,
+      scoreMultiplikator: 3,
+      verlaengerteRunde: 1,
+      fehlerverzeihung: 0,
+    };
+    state.machine01RunCount = 7;
+    state.machine01TotalScore = new Decimal('420');
+    state.machine01HasBroken = true;
     manager.save(state, 99999);
 
     const result = manager.load();
@@ -65,10 +75,14 @@ describe('SaveManager', () => {
       expect(result.state.hallCredits.eq(new Decimal('1e50'))).toBe(true);
       expect(result.state.reflexPunkte.eq(new Decimal('2e30'))).toBe(true);
       expect(result.state.lastTickAt).toBe(12345);
+      expect(result.state.machine01Upgrades).toEqual(state.machine01Upgrades);
+      expect(result.state.machine01RunCount).toBe(7);
+      expect(result.state.machine01TotalScore.eq(420)).toBe(true);
+      expect(result.state.machine01HasBroken).toBe(true);
     }
   });
 
-  it('migrates a v1 save (vor Einführung von reflexPunkte) auf das aktuelle Schema', () => {
+  it('migrates a v1 save (vor Einführung von reflexPunkte/Upgrades) auf das aktuelle Schema', () => {
     storage.setItem(
       SAVE_STORAGE_KEY,
       JSON.stringify({ version: 1, savedAt: 1, state: { hallCredits: '10', lastTickAt: 500 } }),
@@ -81,6 +95,30 @@ describe('SaveManager', () => {
       expect(result.state.hallCredits.eq(10)).toBe(true);
       expect(result.state.reflexPunkte.eq(0)).toBe(true);
       expect(result.state.lastTickAt).toBe(500);
+      expect(result.state.machine01RunCount).toBe(0);
+      expect(result.state.machine01TotalScore.eq(0)).toBe(true);
+      expect(result.state.machine01HasBroken).toBe(false);
+      expect(result.state.machine01Upgrades.scoreMultiplikator).toBe(0);
+    }
+  });
+
+  it('migrates a v2 save (vor Einführung von Upgrades/Break-Tracking) auf das aktuelle Schema', () => {
+    storage.setItem(
+      SAVE_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        savedAt: 1,
+        state: { hallCredits: '0', reflexPunkte: '25', lastTickAt: 900 },
+      }),
+    );
+
+    const result = manager.load();
+
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.state.reflexPunkte.eq(25)).toBe(true);
+      expect(result.state.machine01RunCount).toBe(0);
+      expect(result.state.machine01HasBroken).toBe(false);
     }
   });
 

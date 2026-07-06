@@ -74,6 +74,10 @@ function serialize(state: GameState): SerializedGameState {
     hallCredits: state.hallCredits.toString(),
     reflexPunkte: state.reflexPunkte.toString(),
     lastTickAt: state.lastTickAt,
+    machine01Upgrades: { ...state.machine01Upgrades },
+    machine01RunCount: state.machine01RunCount,
+    machine01TotalScore: state.machine01TotalScore.toString(),
+    machine01HasBroken: state.machine01HasBroken,
   };
 }
 
@@ -82,5 +86,9 @@ function deserialize(state: SerializedGameState): GameState {
     hallCredits: Decimal.fromString(state.hallCredits),
     reflexPunkte: Decimal.fromString(state.reflexPunkte),
     lastTickAt: state.lastTickAt,
+    machine01Upgrades: { ...state.machine01Upgrades },
+    machine01RunCount: state.machine01RunCount,
+    machine01TotalScore: Decimal.fromString(state.machine01TotalScore),
+    machine01HasBroken: state.machine01HasBroken,
   };
 }

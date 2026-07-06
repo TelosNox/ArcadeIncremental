@@ -1,0 +1,58 @@
+import { describe, expect, it } from 'vitest';
+import {
+  computeBreakCurveScore,
+  computeSkillMultiplier,
+  hasReachedBreak,
+} from '../../../src/arcade/machines/machine01-whackamole/breakCondition';
+import { Decimal } from '../../../src/core/BigNumber';
+
+describe('computeSkillMultiplier', () => {
+  it('returns 1 at the assumed baseline average score per run (40)', () => {
+    expect(computeSkillMultiplier(40)).toBe(1);
+  });
+
+  it('scales linearly with average score above the baseline', () => {
+    expect(computeSkillMultiplier(80)).toBe(2);
+  });
+
+  it('clamps to the spec-mandated floor of 0.5 for weak performance', () => {
+    expect(computeSkillMultiplier(10)).toBe(0.5); // 10/40 = 0.25, geclampt auf 0.5
+  });
+});
+
+describe('computeBreakCurveScore', () => {
+  it('matches the documented calibration point (m=1, n=10 -> score ~= S_break)', () => {
+    // SPECIFICATION.md Abschnitt 4: k_avg=9.1 wurde genau dafür kalibriert,
+    // dass ein Durchschnittsspieler (m=1) nach ~10 Runs den Break auslöst.
+    expect(computeBreakCurveScore(10, 1)).toBeCloseTo(100, 0);
+  });
+
+  it('increases with run count', () => {
+    expect(computeBreakCurveScore(5, 1)).toBeLessThan(computeBreakCurveScore(10, 1));
+  });
+
+  it('reaches the break threshold faster for higher skill multipliers', () => {
+    expect(computeBreakCurveScore(5, 2)).toBeGreaterThan(computeBreakCurveScore(5, 1));
+  });
+});
+
+describe('hasReachedBreak', () => {
+  it('is false before any runs have been played', () => {
+    expect(hasReachedBreak(0, new Decimal(0))).toBe(false);
+  });
+
+  it('is false while the curve is still below S_break for an average player', () => {
+    // avg = 200/5 = 40 -> m = 1, score(5,1) ~= 63 < 100
+    expect(hasReachedBreak(5, new Decimal(200))).toBe(false);
+  });
+
+  it('is true once the curve crosses S_break for an average player', () => {
+    // avg = 480/12 = 40 -> m = 1, score(12,1) ~= 110 >= 100
+    expect(hasReachedBreak(12, new Decimal(480))).toBe(true);
+  });
+
+  it('reaches break sooner for a skilled player (higher average score)', () => {
+    // avg = 400/5 = 80 -> m = 2, score(5,2) klar über 100
+    expect(hasReachedBreak(5, new Decimal(400))).toBe(true);
+  });
+});

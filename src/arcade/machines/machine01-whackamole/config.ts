@@ -95,3 +95,15 @@ export const SKILL_MULTIPLIER_MIN = 0.5; // exakt, Abschnitt 4 ("nach unten gecl
 // Weiterhin ein Platzhalter (wie k_avg ein Phase-7-Kalibrierungskandidat),
 // nicht aus echten Spieldaten hergeleitet.
 export const BASELINE_AVERAGE_SCORE_PER_RUN = 150;
+
+// Anomalie-Hinweis (SPECIFICATION.md Abschnitt 1/4): rein visueller,
+// unbeschrifteter Fortschrittsbalken, der mit computeBreakProgress()
+// mitwächst — Spieler sollen spüren, dass "etwas" näher rückt, ohne dass
+// die Oberfläche verrät, was oder wodurch. Reine Präsentationswerte, kein
+// Balance-Wert aus der Spezifikation.
+export const ANOMALY_BAR_WIDTH = 760;
+export const ANOMALY_BAR_HEIGHT = 5;
+export const ANOMALY_COLOR_LOW = 0x33323d; // bei geringem Fortschritt kaum wahrnehmbar
+export const ANOMALY_COLOR_HIGH = 0x9a4fd1; // kurz vor dem Ereignis auffällig
+export const ANOMALY_PULSE_DURATION_MAX_MS = 2200; // träges Pulsieren bei progress~0
+export const ANOMALY_PULSE_DURATION_MIN_MS = 320; // hektisches Pulsieren bei progress~1

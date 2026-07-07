@@ -81,6 +81,14 @@ kleines Mindest-Credits-pro-Run-Sicherheitsnetz einzuführen.
 Da Credits nur durch aktives Spielen entstehen, kann die Schwelle durch
 Nichtstun nie erreicht werden — es gibt keinen Idle-Pfad zum Break.
 
+**Anomalie-Hinweis:** Damit der Spieler merkt, dass "etwas Größeres" im
+Gange ist, ohne den Twist vorwegzunehmen, zeigt die Oberfläche einen
+unbeschrifteten, rein visuellen Fortschritts-Indikator (kein Text, keine
+Zahl, kein Tooltip), der mit `score(n)/S_break` mitwächst — er verändert
+Farbe und Pulsfrequenz, verrät aber nicht, wofür er steht. Verschwindet
+nach dem Break, da das Rätsel dann gelöst ist. Implementiert als
+`computeBreakProgress()` in `breakCondition.ts`.
+
 ## 4a. Automat 1 — konkrete Werte (Whac-a-Mole)
 
 **Score-Formel:**

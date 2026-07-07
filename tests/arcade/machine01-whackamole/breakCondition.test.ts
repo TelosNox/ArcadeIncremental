@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeBreakCurveScore,
+  computeBreakProgress,
   computeSkillMultiplier,
   hasReachedBreak,
 } from '../../../src/arcade/machines/machine01-whackamole/breakCondition';
@@ -60,5 +61,27 @@ describe('hasReachedBreak', () => {
     // Vorher fälschlich schon bei ~200 Punkten/Run (m~5 statt ~1) ausgelöst.
     // avg = 400/2 = 200 -> m = 1.33, score(2, 1.33) liegt klar unter S_break.
     expect(hasReachedBreak(2, new Decimal(400))).toBe(false);
+  });
+});
+
+describe('computeBreakProgress', () => {
+  it('is 0 before any runs have been played', () => {
+    expect(computeBreakProgress(0, new Decimal(0))).toBe(0);
+  });
+
+  it('grows monotonically with run count for a fixed average score', () => {
+    const early = computeBreakProgress(3, new Decimal(450)); // avg 150
+    const later = computeBreakProgress(8, new Decimal(1200)); // avg 150
+    expect(later).toBeGreaterThan(early);
+  });
+
+  it('reaches exactly 1 once the curve crosses S_break, never higher', () => {
+    // avg = 1800/12 = 150 -> m = 1, score(12,1) liegt bereits über S_break
+    expect(computeBreakProgress(12, new Decimal(1800))).toBe(1);
+  });
+
+  it('stays in sync with hasReachedBreak (progress >= 1 iff broken)', () => {
+    expect(hasReachedBreak(5, new Decimal(750))).toBe(computeBreakProgress(5, new Decimal(750)) >= 1);
+    expect(hasReachedBreak(12, new Decimal(1800))).toBe(computeBreakProgress(12, new Decimal(1800)) >= 1);
   });
 });

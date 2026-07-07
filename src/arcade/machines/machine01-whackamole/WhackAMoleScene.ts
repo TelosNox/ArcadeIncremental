@@ -5,8 +5,14 @@ import type { ArcadeBridge } from '../../PhaserBridge';
 import { scoreToCredits } from '../../shared/ScoreToCurrency';
 import { formatNumber } from '../../../ui/formatNumber';
 import type { UIState, UIStateController } from '../../../ui/UIState';
-import { hasReachedBreak } from './breakCondition';
+import { computeBreakProgress, hasReachedBreak } from './breakCondition';
 import {
+  ANOMALY_BAR_HEIGHT,
+  ANOMALY_BAR_WIDTH,
+  ANOMALY_COLOR_HIGH,
+  ANOMALY_COLOR_LOW,
+  ANOMALY_PULSE_DURATION_MAX_MS,
+  ANOMALY_PULSE_DURATION_MIN_MS,
   FEEDBACK_RISE_DISTANCE_PX,
   HIT_FEEDBACK_DURATION_MS,
   HOLE_COUNT,
@@ -59,6 +65,8 @@ export class WhackAMoleScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private promptText!: Phaser.GameObjects.Text;
   private upgradesButton!: Phaser.GameObjects.Text;
+  private anomalyBar!: Phaser.GameObjects.Rectangle;
+  private anomalyPulseTween: Phaser.Tweens.Tween | null = null;
 
   constructor(bridge: ArcadeBridge, uiState: UIStateController) {
     super('WhackAMoleScene');
@@ -126,6 +134,14 @@ export class WhackAMoleScene extends Phaser.Scene {
       this.updateOverlayVisibility(state);
     });
     this.updateOverlayVisibility(this.uiState.getState());
+
+    // Unbeschrifteter Anomalie-Hinweis (SPECIFICATION.md Abschnitt 1/4):
+    // wächst mit computeBreakProgress(), ohne dass die Oberfläche verrät,
+    // wofür er steht. Startet unsichtbar (width 0) bei progress 0.
+    this.anomalyBar = this.add
+      .rectangle(GRID_CENTER_X - ANOMALY_BAR_WIDTH / 2, 48, 0, ANOMALY_BAR_HEIGHT, ANOMALY_COLOR_LOW)
+      .setOrigin(0, 0.5);
+    this.updateAnomalyIndicator();
 
     this.updateStatusText();
   }
@@ -200,7 +216,42 @@ export class WhackAMoleScene extends Phaser.Scene {
       `Run beendet — Score: ${formatNumber(this.score)} (${this.hits} Treffer, ${this.misses} verpasste Moles)\n` +
         `+${formatNumber(creditsEarned)} Reflex-Punkte — Klicken für neuen Run`,
     );
+    this.updateAnomalyIndicator();
     this.updateStatusText();
+  }
+
+  // Unbeschrifteter Fortschritts-Hinweis (SPECIFICATION.md Abschnitt 1/4):
+  // wächst und pulsiert schneller, je näher computeBreakProgress() an 1
+  // kommt — kein Text, keine Zahl, die verrät, worum es geht. Verschwindet
+  // nach dem Break, weil das Rätsel dann gelöst ist.
+  private updateAnomalyIndicator(): void {
+    const state = this.bridge.getState();
+    if (state.machine01HasBroken) {
+      this.anomalyBar.setVisible(false);
+      this.anomalyPulseTween?.stop();
+      return;
+    }
+
+    const progress = computeBreakProgress(state.machine01RunCount, state.machine01TotalScore);
+    this.anomalyBar.setVisible(true);
+    this.anomalyBar.setSize(ANOMALY_BAR_WIDTH * progress, ANOMALY_BAR_HEIGHT);
+
+    const low = Phaser.Display.Color.ValueToColor(ANOMALY_COLOR_LOW);
+    const high = Phaser.Display.Color.ValueToColor(ANOMALY_COLOR_HIGH);
+    const mixed = Phaser.Display.Color.Interpolate.ColorWithColor(low, high, 100, Math.round(progress * 100));
+    this.anomalyBar.setFillStyle(Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b));
+
+    this.anomalyPulseTween?.stop();
+    this.anomalyBar.setAlpha(1);
+    const pulseDuration = Phaser.Math.Linear(ANOMALY_PULSE_DURATION_MAX_MS, ANOMALY_PULSE_DURATION_MIN_MS, progress);
+    this.anomalyPulseTween = this.tweens.add({
+      targets: this.anomalyBar,
+      alpha: { from: 1, to: 0.3 },
+      duration: pulseDuration,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private spawnMole(): void {

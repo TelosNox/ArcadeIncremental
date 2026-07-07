@@ -100,7 +100,15 @@ store.subscribe((state) => {
 
 // Sicherheitsnetz für alles, was der obige Vergleich übersehen könnte (z. B.
 // künftige GameState-Felder, die vergessen werden in die Liste aufzunehmen).
+// isResetting unterdrückt genau diesen Save während eines absichtlichen
+// Resets (siehe arcadeDebug.reset()) — sonst würde reload() selbst über
+// beforeunload den gerade gelöschten Save mit dem noch im Speicher stehenden
+// alten Zustand wieder zurückschreiben, bevor die Seite überhaupt neu lädt.
+let isResetting = false;
 window.addEventListener('beforeunload', () => {
+  if (isResetting) {
+    return;
+  }
   saveManager.save(store.getState());
 });
 
@@ -112,6 +120,7 @@ declare global {
       saveManager: SaveManager;
       addHallCredits: (amount: number) => void;
       save: () => void;
+      reset: () => void;
     };
   }
 }
@@ -126,5 +135,10 @@ window.arcadeDebug = {
   save: () => {
     saveManager.save(store.getState());
     console.log('[SaveManager] gespeichert.');
+  },
+  reset: () => {
+    isResetting = true;
+    saveManager.clear();
+    window.location.reload();
   },
 };

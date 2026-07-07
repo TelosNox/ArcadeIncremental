@@ -62,6 +62,14 @@ export class SaveManager {
     return { status: 'ok', state: deserialize(migration.state as SerializedGameState) };
   }
 
+  // Löscht ausschließlich den Save-Slot (keine Backup-Kopien) — für einen
+  // bewussten, vollständigen Spielstand-Reset. Ruft absichtlich nicht
+  // window.location.reload() selbst auf: SaveManager kennt kein DOM/window,
+  // das ist Sache des Aufrufers (siehe main.ts window.arcadeDebug.reset()).
+  clear(): void {
+    this.storage.removeItem(SAVE_STORAGE_KEY);
+  }
+
   private resetWithBackup(raw: string, fromVersionLabel: string, reason: string): LoadResult {
     this.storage.setItem(`${BACKUP_KEY_PREFIX}-${fromVersionLabel}-${Date.now()}`, raw);
     this.storage.removeItem(SAVE_STORAGE_KEY);

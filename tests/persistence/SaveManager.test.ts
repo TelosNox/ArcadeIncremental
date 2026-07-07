@@ -159,4 +159,24 @@ describe('SaveManager', () => {
     expect(storage.getItem(SAVE_STORAGE_KEY)).toBeNull();
     expect(storage.keys().some((key) => key.includes('backup'))).toBe(true);
   });
+
+  describe('clear', () => {
+    it('removes the save slot so the next load reports "empty"', () => {
+      manager.save(createInitialGameState(0));
+      expect(manager.load().status).toBe('ok');
+
+      manager.clear();
+
+      expect(manager.load()).toEqual({ status: 'empty' });
+    });
+
+    it('does not touch unrelated keys (e.g. backups from a previous reset)', () => {
+      storage.setItem('incremental-arcade-hall:save-backup-unbekannt-1', 'irrelevant');
+      manager.save(createInitialGameState(0));
+
+      manager.clear();
+
+      expect(storage.getItem('incremental-arcade-hall:save-backup-unbekannt-1')).toBe('irrelevant');
+    });
+  });
 });

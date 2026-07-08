@@ -6,7 +6,6 @@ import { Decimal } from '../../../core/BigNumber';
 // Formel ohne Phaser testbar bleibt.
 export interface ScoreFormulaParams {
   basisPunkte: number;
-  strafe: number;
   zeitBonusReferenceMs: number;
   zeitBonusMin: number;
   zeitBonusMax: number;
@@ -14,10 +13,12 @@ export interface ScoreFormulaParams {
 }
 
 // Score-Formel (SPECIFICATION.md Abschnitt 4a):
-// score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (verpasste_moles × strafe)
+// score = Σ (treffer_i × basis_punkte × zeit_bonus_i)
 // "Treffer" = Cursor kam in Reichweite einer aktiven Mole (Hover-Mechanik,
-// siehe WhackAMoleScene.checkHoverHits); "verpasste Mole" = despawnt ohne
-// Treffer (siehe WhackAMoleScene.spawnMole).
+// siehe WhackAMoleScene.checkHoverHits). Kein Strafpunkte-Term mehr für
+// verpasste Moles (mit dem Nutzer abgestimmt: Strafpunkte wirken
+// kontraproduktiv aufs Spielerlebnis, gilt für alle Automaten) — eine
+// verpasste Mole bleibt Score-neutral.
 
 export function computeZeitBonus(
   reaktionszeitMs: number,
@@ -38,14 +39,6 @@ export function computeHitScore(reaktionszeitMs: number, params: ScoreFormulaPar
     .round();
 }
 
-export function computeMissPenalty(params: Pick<ScoreFormulaParams, 'strafe'>): Decimal {
-  return new Decimal(params.strafe);
-}
-
 export function applyHit(currentScore: Decimal, reaktionszeitMs: number, params: ScoreFormulaParams): Decimal {
   return currentScore.add(computeHitScore(reaktionszeitMs, params));
-}
-
-export function applyMiss(currentScore: Decimal, params: Pick<ScoreFormulaParams, 'strafe'>): Decimal {
-  return currentScore.sub(computeMissPenalty(params));
 }

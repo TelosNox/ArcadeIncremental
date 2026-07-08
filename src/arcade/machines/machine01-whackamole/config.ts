@@ -2,7 +2,6 @@
 // Abschnitt 4a.
 
 export const BASIS_PUNKTE = 10;
-export const STRAFE = 5; // pro Mole, die despawnt, ohne getroffen zu werden (Hover-Mechanik, siehe WhackAMoleScene)
 
 export const ZEIT_BONUS_REFERENCE_MS = 500;
 export const ZEIT_BONUS_MIN = 0.5;
@@ -30,7 +29,10 @@ export const PERFEKT_ZEIT_BONUS_THRESHOLD = 1.5;
 
 export const PERFECT_HIT_COLOR = 0xffd54a;
 export const NORMAL_HIT_COLOR = 0x9fd89f;
-export const MISS_COLOR = 0xdd4444;
+// Neutrales statt alarmierendes Rot (mit dem Nutzer abgestimmt: Strafpunkte
+// und ihre Aufmachung wirken kontraproduktiv aufs Spielerlebnis) — eine
+// verpasste Mole ist reine Information, kein Fehlerzustand.
+export const MISS_COLOR = 0x8fd0ff;
 
 export const HIT_FEEDBACK_DURATION_MS = 450;
 export const MISS_FEEDBACK_DURATION_MS = 450;
@@ -64,13 +66,13 @@ export const VERLAENGERTE_RUNDE_COST_WACHSTUM = 1.25;
 export const VERLAENGERTE_RUNDE_MS_PER_LEVEL = 5_000; // +5s pro Stufe (exakt, Abschnitt 4a)
 export const VERLAENGERTE_RUNDE_MAX_LEVEL = 3; // max. 3 Stufen (exakt, Abschnitt 4a)
 
-export const FEHLERVERZEIHUNG_COST_BASIS = 12;
-export const FEHLERVERZEIHUNG_COST_WACHSTUM = 1.15;
-// Spezifikationslücke: Effektstärke/Untergrenze nicht beziffert ("reduziert
-// strafe pro verpasster Mole"). Sinnvolle Annahme mit Floor, damit strafe nie
-// auf 0 oder negativ fällt (sonst würden verpasste Moles irgendwann belohnt).
-export const FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL = 1;
-export const FEHLERVERZEIHUNG_STRAFE_MIN = 1;
+// "Fehlerverzeihung" (reduzierte Strafe pro verpasster Mole) ist entfallen,
+// seit Strafpunkte komplett aus allen Automaten entfernt wurden (mit dem
+// Nutzer abgestimmt: Strafpunkte wirken kontraproduktiv aufs Spielerlebnis).
+// Der Support-Boost "Slow-Motion-Charge/Extra-Leben" wirkt bei Automat 1
+// seitdem proaktiv statt reaktiv: er verlängert die Sichtbarkeitsdauer einer
+// Mole, statt eine Strafe zu vergeben, die es nicht mehr gibt.
+export const SLOW_MOTION_MOLE_VISIBLE_BONUS_MS_PER_LEVEL = 100;
 
 // Break-Bedingung (Abschnitt 4) — exklusiv Automat 1 (Abschnitt 1: der
 // Blind/Reveal-Twist existiert nur hier), deshalb hier statt in der
@@ -85,16 +87,20 @@ export const SKILL_MULTIPLIER_MIN = 0.5; // exakt, Abschnitt 4 ("nach unten gecl
 // Spezifikationslücke: `m` ist in Abschnitt 4 nur narrativ beschrieben, keine
 // exakte Formel. Sinnvolle Annahme: m = durchschnittsScore / Baseline.
 //
-// Der erste Wert (40) war deutlich zu niedrig angesetzt und ließ den Break
-// bereits nach 1-2 Runs auslösen: bei ~30s Rundendauer und Mole-Spawns alle
-// 500-1200ms entstehen rechnerisch ~37 Trefferchancen pro Run, was schon bei
-// durchschnittlichem Spiel (basis_punkte=10, zeit_bonus 0.5-2) leicht
-// 150-300+ Punkte pro Run ergibt — weit über der alten Baseline, also
-// m >> 1 statt der vorgesehenen ~1. 150 trifft die drei Beispielwerte aus
-// Abschnitt 4 (schwach ~20, Durchschnitt ~10, gut ~5 Runs) deutlich besser.
-// Weiterhin ein Platzhalter (wie k_avg ein Phase-7-Kalibrierungskandidat),
-// nicht aus echten Spieldaten hergeleitet.
-export const BASELINE_AVERAGE_SCORE_PER_RUN = 150;
+// Zweite Kalibrierung, erstmals mit einem echten Spieldatenpunkt statt einer
+// reinen Schätzung: erster (upgrade-loser) Run eines Testers ergab 423 Punkte
+// bei "nicht perfekt, aber schon relativ gut" gespielt — also spürbar über
+// "Durchschnitt" (m=1), aber unterhalb der "Guter Spieler"-Bestmarke
+// (Abschnitt 4). Interpretiert als m ≈ 1.5 (Mitte zwischen den beiden
+// Referenzpunkten), macht das Baseline = 423 / 1.5 ≈ 280. Bei konstant 423
+// Punkten/Run würde das den Break rechnerisch bei Run ~7 auslösen — sauber
+// zwischen "Guter Spieler" (~5) und "Durchschnitt" (~10). Der vorherige Wert
+// (150) ließ dieselbe Leistung schon bei Run 3 brechen (m ≈ 3.3), weil er auf
+// einer reinen Schätzung ohne echte Spieldaten beruhte (siehe Git-Historie).
+// Bleibt trotzdem ein Kalibrierungskandidat: ein einzelner Datenpunkt einer
+// einzelnen Testperson, kein Ersatz für den breiteren Balancing-Pass
+// (Phase 7) mit mehreren Spielern.
+export const BASELINE_AVERAGE_SCORE_PER_RUN = 280;
 
 // Anomalie-Hinweis (SPECIFICATION.md Abschnitt 1/4): rein visueller,
 // unbeschrifteter Fortschrittsbalken, der mit computeBreakProgress()

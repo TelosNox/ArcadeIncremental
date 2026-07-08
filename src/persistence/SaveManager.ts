@@ -81,11 +81,17 @@ function serialize(state: GameState): SerializedGameState {
   return {
     hallCredits: state.hallCredits.toString(),
     reflexPunkte: state.reflexPunkte.toString(),
+    abschuesse: state.abschuesse.toString(),
     lastTickAt: state.lastTickAt,
     machine01Upgrades: { ...state.machine01Upgrades },
     machine01RunCount: state.machine01RunCount,
     machine01TotalScore: state.machine01TotalScore.toString(),
     machine01HasBroken: state.machine01HasBroken,
+    machine02Upgrades: { ...state.machine02Upgrades },
+    unlockedMachines: [...state.unlockedMachines],
+    hallUpgrades: { ...state.hallUpgrades },
+    machine01SupportBoosts: { ...state.machine01SupportBoosts },
+    machine02SupportBoosts: { ...state.machine02SupportBoosts },
   };
 }
 
@@ -93,10 +99,16 @@ function deserialize(state: SerializedGameState): GameState {
   return {
     hallCredits: Decimal.fromString(state.hallCredits),
     reflexPunkte: Decimal.fromString(state.reflexPunkte),
+    abschuesse: Decimal.fromString(state.abschuesse),
     lastTickAt: state.lastTickAt,
     machine01Upgrades: { ...state.machine01Upgrades },
     machine01RunCount: state.machine01RunCount,
     machine01TotalScore: Decimal.fromString(state.machine01TotalScore),
     machine01HasBroken: state.machine01HasBroken,
+    machine02Upgrades: { ...state.machine02Upgrades },
+    unlockedMachines: [...state.unlockedMachines],
+    hallUpgrades: { ...state.hallUpgrades },
+    machine01SupportBoosts: { ...state.machine01SupportBoosts },
+    machine02SupportBoosts: { ...state.machine02SupportBoosts },
   };
 }

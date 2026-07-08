@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Decimal } from '../../../src/core/BigNumber';
 import {
   applyHit,
-  applyMiss,
   computeHitScore,
-  computeMissPenalty,
   computeZeitBonus,
   type ScoreFormulaParams,
 } from '../../../src/arcade/machines/machine01-whackamole/scoring';
@@ -13,7 +11,6 @@ import {
 // damit die Formel unabhängig von computeEffectiveParams() testbar bleibt.
 const BASE_PARAMS: ScoreFormulaParams = {
   basisPunkte: 10,
-  strafe: 5,
   zeitBonusReferenceMs: 500,
   zeitBonusMin: 0.5,
   zeitBonusMax: 2,
@@ -64,31 +61,12 @@ describe('computeHitScore', () => {
   });
 });
 
-describe('computeMissPenalty', () => {
-  it('equals the strafe constant (5)', () => {
-    expect(computeMissPenalty(BASE_PARAMS).eq(5)).toBe(true);
-  });
-
-  it('reflects a reduced strafe from the Fehlerverzeihung upgrade', () => {
-    expect(computeMissPenalty({ ...BASE_PARAMS, strafe: 3 }).eq(3)).toBe(true);
-  });
-});
-
-describe('applyHit / applyMiss', () => {
-  it('accumulates score across hits and misses (Abschnitt 4a Formel)', () => {
+describe('applyHit', () => {
+  it('accumulates score across hits (Abschnitt 4a Formel, kein Strafpunkte-Term mehr)', () => {
     let score = new Decimal(0);
     score = applyHit(score, 500, BASE_PARAMS); // +10
     score = applyHit(score, 0, BASE_PARAMS); // +20
-    score = applyMiss(score, BASE_PARAMS); // -5
 
-    expect(score.eq(25)).toBe(true);
-  });
-
-  it('allows the score to go negative when misses dominate', () => {
-    let score = new Decimal(0);
-    score = applyMiss(score, BASE_PARAMS);
-    score = applyMiss(score, BASE_PARAMS);
-
-    expect(score.eq(-10)).toBe(true);
+    expect(score.eq(30)).toBe(true);
   });
 });

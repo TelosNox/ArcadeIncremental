@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCORE_TO_CREDITS_DIVISOR } from '../../../config/balance';
 import { Decimal, ZERO } from '../../../core/BigNumber';
 import type { ArcadeBridge } from '../../PhaserBridge';
+import { ArcadeSceneChrome } from '../../shared/ArcadeSceneBase';
 import { scoreToCredits } from '../../shared/ScoreToCurrency';
 import { formatNumber } from '../../../ui/formatNumber';
 import type { UIState, UIStateController } from '../../../ui/UIState';
@@ -21,13 +22,12 @@ import {
   MISS_FLASH_DURATION_MS,
   MOLE_SPAWN_INTERVAL_END_MS,
   MOLE_SPAWN_INTERVAL_START_MS,
-  MOLE_VISIBLE_DURATION_MS,
   NORMAL_HIT_COLOR,
   PERFECT_HIT_COLOR,
   PERFEKT_ZEIT_BONUS_THRESHOLD,
   PUNCH_TWEEN_DURATION_MS,
 } from './config';
-import { applyHit, applyMiss, computeHitScore, computeMissPenalty, computeZeitBonus } from './scoring';
+import { applyHit, computeHitScore, computeZeitBonus } from './scoring';
 import { computeEffectiveParams, type EffectiveMachine01Params } from './upgrades';
 
 // Reine Layout-Werte fürs Platzhalter-Grid, keine Balance-Konstanten
@@ -53,6 +53,7 @@ function colorToCss(color: number): string {
 export class WhackAMoleScene extends Phaser.Scene {
   private readonly bridge: ArcadeBridge;
   private readonly uiState: UIStateController;
+  private readonly openUpgrades: () => void;
 
   private holes: HoleView[] = [];
   private score: Decimal = ZERO;
@@ -64,14 +65,15 @@ export class WhackAMoleScene extends Phaser.Scene {
 
   private statusText!: Phaser.GameObjects.Text;
   private promptText!: Phaser.GameObjects.Text;
-  private upgradesButton!: Phaser.GameObjects.Text;
+  private chrome!: ArcadeSceneChrome;
   private anomalyBar!: Phaser.GameObjects.Rectangle;
   private anomalyPulseTween: Phaser.Tweens.Tween | null = null;
 
-  constructor(bridge: ArcadeBridge, uiState: UIStateController) {
+  constructor(bridge: ArcadeBridge, uiState: UIStateController, openUpgrades: () => void) {
     super('WhackAMoleScene');
     this.bridge = bridge;
     this.uiState = uiState;
+    this.openUpgrades = openUpgrades;
   }
 
   create(): void {
@@ -114,25 +116,21 @@ export class WhackAMoleScene extends Phaser.Scene {
       }
     });
 
-    this.upgradesButton = this.add
-      .text(780, 20, 'Upgrades ▸', {
-        fontFamily: 'monospace',
-        fontSize: '18px',
-        color: '#8fd0ff',
-      })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: true });
-
-    this.upgradesButton.on('pointerdown', () => {
-      const current = this.uiState.getState();
-      if (current === 'idle' || current === 'runResult') {
-        this.uiState.setState('upgrade');
-      }
+    this.chrome = new ArcadeSceneChrome({
+      scene: this,
+      uiState: this.uiState,
+      onOpenUpgrades: () => this.openUpgrades(),
     });
 
-    this.uiState.subscribe((state) => {
+    const unsubscribe = this.uiState.subscribe((state) => {
       this.updateOverlayVisibility(state);
     });
+    // Ohne dieses Abmelden würde jeder erneute Einstieg über die HallScene
+    // (this.scene.start('WhackAMoleScene')) eine weitere Kopie dieses
+    // Listeners registrieren, die noch auf die Objekte des vorigen create()-
+    // Durchlaufs zeigt (von Phaser beim Scene-Shutdown bereits zerstört) —
+    // das wirft beim nächsten uiState-Wechsel eine Exception.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, unsubscribe);
     this.updateOverlayVisibility(this.uiState.getState());
 
     // Unbeschrifteter Anomalie-Hinweis (SPECIFICATION.md Abschnitt 1/4):
@@ -168,15 +166,21 @@ export class WhackAMoleScene extends Phaser.Scene {
   private updateOverlayVisibility(state: UIState): void {
     const showPrompt = state === 'idle' || state === 'runResult';
     this.promptText.setVisible(showPrompt);
-    this.upgradesButton.setVisible(showPrompt);
+    // Rückkehr-zur-Halle bleibt bis zum Break verborgen (SPECIFICATION.md
+    // Abschnitt 1: der Blind/Reveal-Twist darf vorher nicht verraten werden)
+    // — der Knopf würde sonst die Existenz der Spielhalle spoilern, bevor
+    // der Spieler sie durch den Break erreicht.
+    this.chrome.setVisible(showPrompt, this.bridge.getState().machine01HasBroken);
   }
 
   private startRun(): void {
-    const upgrades = this.bridge.getState().machine01Upgrades;
-    this.effectiveParams = computeEffectiveParams(upgrades);
+    const state = this.bridge.getState();
+    this.effectiveParams = computeEffectiveParams(state.machine01Upgrades, state.machine01SupportBoosts);
 
     this.uiState.setState('playing');
-    this.score = ZERO;
+    // Support-Boost "Kopfstart" (hall/SupportBoosts.ts): Run beginnt mit
+    // kleinem Basis-Score statt bei 0.
+    this.score = new Decimal(this.effectiveParams.startScore);
     this.hits = 0;
     this.misses = 0;
     this.remainingMs = this.effectiveParams.runDurationMs;
@@ -270,7 +274,7 @@ export class WhackAMoleScene extends Phaser.Scene {
     const interval = Phaser.Math.Linear(MOLE_SPAWN_INTERVAL_START_MS, MOLE_SPAWN_INTERVAL_END_MS, progress);
     this.nextSpawnAt = this.time.now + interval;
 
-    this.time.delayedCall(MOLE_VISIBLE_DURATION_MS, () => {
+    this.time.delayedCall(this.effectiveParams.moleVisibleDurationMs, () => {
       if (hole.moleShownAt === null) {
         return; // wurde schon per Hover getroffen
       }
@@ -278,8 +282,9 @@ export class WhackAMoleScene extends Phaser.Scene {
       hole.moleShownAt = null;
       if (this.effectiveParams) {
         // Despawn ohne Treffer zählt als verpasste Mole (siehe Klassen-
-        // Kommentar zu checkHoverHits/Hover-Mechanik).
-        this.score = applyMiss(this.score, this.effectiveParams);
+        // Kommentar zu checkHoverHits/Hover-Mechanik) — rein informativ für
+        // die Run-Zusammenfassung, kein Score-Abzug mehr (mit dem Nutzer
+        // abgestimmt: Strafpunkte wirken kontraproduktiv aufs Spielerlebnis).
         this.misses += 1;
         this.showMissFeedback(hole.x, hole.y);
         this.updateStatusText();
@@ -295,8 +300,8 @@ export class WhackAMoleScene extends Phaser.Scene {
   // macht "in Reichweite sein" zur eigentlichen Fähigkeit, die das Upgrade
   // ausbaut, und bleibt aktives Spielen (Cursor muss aktiv zur richtigen von
   // 9 Positionen bewegt werden). Ein "Fehlklick" gibt es dadurch nicht mehr;
-  // die Strafe wird stattdessen fällig, wenn eine Mole unangetastet despawnt
-  // (siehe spawnMole()).
+  // eine unangetastet despawnte Mole zählt lediglich als verpasst (siehe
+  // spawnMole()), ohne Score-Abzug.
   private checkHoverHits(): void {
     if (!this.effectiveParams) {
       return;
@@ -347,11 +352,11 @@ export class WhackAMoleScene extends Phaser.Scene {
     this.spawnFloatingText(hole.x, hole.y - HOLE_RADIUS, label, color, HIT_FEEDBACK_DURATION_MS);
   }
 
+  // Rein informatives Feedback (kein Score-Abzug mehr, mit dem Nutzer
+  // abgestimmt: Strafpunkte wirken kontraproduktiv aufs Spielerlebnis) —
+  // neutrale Farbe statt Alarm-Rot, neutraler Text statt "-X".
   private showMissFeedback(x: number, y: number): void {
-    if (!this.effectiveParams) {
-      return;
-    }
-    const flash = this.add.circle(x, y, HOLE_RADIUS * 0.5, MISS_COLOR, 0.6);
+    const flash = this.add.circle(x, y, HOLE_RADIUS * 0.5, MISS_COLOR, 0.5);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -361,13 +366,7 @@ export class WhackAMoleScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
 
-    this.spawnFloatingText(
-      x,
-      y,
-      `-${formatNumber(computeMissPenalty(this.effectiveParams))}`,
-      MISS_COLOR,
-      MISS_FEEDBACK_DURATION_MS,
-    );
+    this.spawnFloatingText(x, y, 'Verpasst', MISS_COLOR, MISS_FEEDBACK_DURATION_MS);
   }
 
   private spawnFloatingText(x: number, y: number, label: string, color: number, durationMs: number): void {

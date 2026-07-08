@@ -1,7 +1,10 @@
 // UI-Zustand (SPECIFICATION.md Abschnitt 10) — getrennt vom Spielzustand im
-// StateStore. Wird von der aktiven Automaten-Scene und DOM-Overlays
-// (UpgradePanel, RevealSequence) gemeinsam genutzt, um sich zu koordinieren,
-// ohne dass sie sich direkt kennen müssen.
+// StateStore. Wird von der jeweils aktiven Automaten-Scene und ihren
+// DOM-Overlays (UpgradePanel, RevealSequence) gemeinsam genutzt, um sich zu
+// koordinieren, ohne dass sie sich direkt kennen müssen. Gilt innerhalb
+// einer einzelnen Automaten-Scene (WhackAMoleScene, ShooterScene, ...) —
+// die HallScene (Phase 5) ist eine eigene Phaser-Scene mit eigener
+// Navigation, kein UIState-Overlay mehr (ehemals 'hall').
 export type UIState = 'idle' | 'playing' | 'runResult' | 'upgrade' | 'reveal';
 
 export type UIStateListener = (state: UIState) => void;

@@ -1,14 +1,12 @@
 import { Decimal } from '../../../core/BigNumber';
-import type { Machine01UpgradeLevels } from '../../../state/GameState';
+import { computeKopfstartBaseScore, computeTrainerScoreBonus } from '../../../hall/SupportBoosts';
+import type { Machine01UpgradeLevels, SupportBoostLevels } from '../../../state/GameState';
 import {
   BASIS_PUNKTE,
-  FEHLERVERZEIHUNG_COST_BASIS,
-  FEHLERVERZEIHUNG_COST_WACHSTUM,
-  FEHLERVERZEIHUNG_STRAFE_MIN,
-  FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL,
   GROESSERER_HAMMER_COST_BASIS,
   GROESSERER_HAMMER_COST_WACHSTUM,
   GROESSERER_HAMMER_RADIUS_PX_PER_LEVEL,
+  MOLE_VISIBLE_DURATION_MS,
   RUN_DURATION_MS,
   SCHNELLERE_REFLEXE_COST_BASIS,
   SCHNELLERE_REFLEXE_COST_WACHSTUM,
@@ -16,7 +14,7 @@ import {
   SCORE_MULTIPLIKATOR_COST_BASIS,
   SCORE_MULTIPLIKATOR_COST_WACHSTUM,
   SCORE_MULTIPLIKATOR_PER_LEVEL,
-  STRAFE,
+  SLOW_MOTION_MOLE_VISIBLE_BONUS_MS_PER_LEVEL,
   VERLAENGERTE_RUNDE_COST_BASIS,
   VERLAENGERTE_RUNDE_COST_WACHSTUM,
   VERLAENGERTE_RUNDE_MAX_LEVEL,
@@ -40,7 +38,9 @@ export interface UpgradeDefinition {
 
 // Upgrade-Liste (SPECIFICATION.md Abschnitt 4a). Kostenformel `basis ×
 // wachstum^level` exakt aus der Tabelle; Effektbeschreibungen für das
-// Upgrade-Panel (Abschnitt 10).
+// Upgrade-Panel (Abschnitt 10). "Fehlerverzeihung" (reduzierte Strafe pro
+// verpasster Mole) ist entfallen, seit Strafpunkte komplett aus allen
+// Automaten entfernt wurden (mit dem Nutzer abgestimmt).
 export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
   {
     id: 'schnellereReflexe',
@@ -71,14 +71,6 @@ export const UPGRADE_DEFINITIONS: readonly UpgradeDefinition[] = [
     maxLevel: VERLAENGERTE_RUNDE_MAX_LEVEL,
     describeEffect: (level) => `+${(level * VERLAENGERTE_RUNDE_MS_PER_LEVEL) / 1000}s Run-Dauer`,
   },
-  {
-    id: 'fehlerverzeihung',
-    name: 'Fehlerverzeihung',
-    costBasis: FEHLERVERZEIHUNG_COST_BASIS,
-    costWachstum: FEHLERVERZEIHUNG_COST_WACHSTUM,
-    describeEffect: (level) =>
-      `Strafe pro verpasster Mole -${level * FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL} (min. ${FEHLERVERZEIHUNG_STRAFE_MIN})`,
-  },
 ];
 
 export function getUpgradeDefinition(id: Machine01UpgradeId): UpgradeDefinition {
@@ -101,23 +93,32 @@ export function getUpgradeMaxLevel(id: Machine01UpgradeId): number | undefined {
 export interface EffectiveMachine01Params extends ScoreFormulaParams {
   hitRadiusBonusPx: number;
   runDurationMs: number;
+  moleVisibleDurationMs: number; // Support-Boost "Slow-Motion-Charge/Extra-Leben", hall/SupportBoosts.ts
+  startScore: number; // Support-Boost "Kopfstart", hall/SupportBoosts.ts
 }
 
-// Wendet die aktuellen Upgrade-Level auf die Basiswerte an (SPECIFICATION.md
-// Abschnitt 4a). RUN_DURATION_MS selbst bleibt unverändert in config.ts —
-// hier kommt nur der Bonus obendrauf.
-export function computeEffectiveParams(upgrades: Machine01UpgradeLevels): EffectiveMachine01Params {
+// Wendet die aktuellen Upgrade-Level UND Hallen-Support-Boosts (Phase 4,
+// SPECIFICATION.md Abschnitt 6) auf die Basiswerte an. RUN_DURATION_MS selbst
+// bleibt unverändert in config.ts — hier kommt nur der Bonus obendrauf.
+// Support-Boosts wirken additiv zusätzlich zu den lokalen Upgrades (z. B.
+// Trainer-Bonus zusätzlich zum Score-Multiplikator-Upgrade).
+export function computeEffectiveParams(
+  upgrades: Machine01UpgradeLevels,
+  supportBoosts: SupportBoostLevels,
+): EffectiveMachine01Params {
   return {
     basisPunkte: BASIS_PUNKTE,
-    strafe: Math.max(
-      STRAFE - upgrades.fehlerverzeihung * FEHLERVERZEIHUNG_STRAFE_REDUKTION_PRO_LEVEL,
-      FEHLERVERZEIHUNG_STRAFE_MIN,
-    ),
     zeitBonusReferenceMs: ZEIT_BONUS_REFERENCE_MS + upgrades.schnellereReflexe * SCHNELLERE_REFLEXE_MS_PER_LEVEL,
     zeitBonusMin: ZEIT_BONUS_MIN,
     zeitBonusMax: ZEIT_BONUS_MAX,
-    scoreMultiplier: 1 + upgrades.scoreMultiplikator * SCORE_MULTIPLIKATOR_PER_LEVEL,
+    scoreMultiplier:
+      1 + upgrades.scoreMultiplikator * SCORE_MULTIPLIKATOR_PER_LEVEL + computeTrainerScoreBonus(supportBoosts),
     hitRadiusBonusPx: upgrades.groessererHammer * GROESSERER_HAMMER_RADIUS_PX_PER_LEVEL,
     runDurationMs: RUN_DURATION_MS + upgrades.verlaengerteRunde * VERLAENGERTE_RUNDE_MS_PER_LEVEL,
+    // Seit Strafpunkte entfernt wurden, wirkt "Slow-Motion-Charge/Extra-
+    // Leben" proaktiv statt reaktiv: Moles bleiben pro Boost-Stufe länger
+    // sichtbar, statt eine (nicht mehr existente) Strafe zu erlassen.
+    moleVisibleDurationMs: MOLE_VISIBLE_DURATION_MS + supportBoosts.slowMotion * SLOW_MOTION_MOLE_VISIBLE_BONUS_MS_PER_LEVEL,
+    startScore: computeKopfstartBaseScore(supportBoosts),
   };
 }

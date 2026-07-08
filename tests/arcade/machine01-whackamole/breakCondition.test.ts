@@ -8,16 +8,16 @@ import {
 import { Decimal } from '../../../src/core/BigNumber';
 
 describe('computeSkillMultiplier', () => {
-  it('returns 1 at the assumed baseline average score per run (150)', () => {
-    expect(computeSkillMultiplier(150)).toBe(1);
+  it('returns 1 at the assumed baseline average score per run (280)', () => {
+    expect(computeSkillMultiplier(280)).toBe(1);
   });
 
   it('scales linearly with average score above the baseline', () => {
-    expect(computeSkillMultiplier(300)).toBe(2);
+    expect(computeSkillMultiplier(560)).toBe(2);
   });
 
   it('clamps to the spec-mandated floor of 0.5 for weak performance', () => {
-    expect(computeSkillMultiplier(30)).toBe(0.5); // 30/150 = 0.2, geclampt auf 0.5
+    expect(computeSkillMultiplier(56)).toBe(0.5); // 56/280 = 0.2, geclampt auf 0.5
   });
 });
 
@@ -43,24 +43,33 @@ describe('hasReachedBreak', () => {
   });
 
   it('is false while the curve is still below S_break for an average player', () => {
-    // avg = 750/5 = 150 -> m = 1, score(5,1) ~= 63 < 100
-    expect(hasReachedBreak(5, new Decimal(750))).toBe(false);
+    // avg = 1400/5 = 280 -> m = 1, score(5,1) ~= 63 < 100
+    expect(hasReachedBreak(5, new Decimal(1400))).toBe(false);
   });
 
   it('is true once the curve crosses S_break for an average player', () => {
-    // avg = 1800/12 = 150 -> m = 1, score(12,1) ~= 110 >= 100
-    expect(hasReachedBreak(12, new Decimal(1800))).toBe(true);
+    // avg = 3360/12 = 280 -> m = 1, score(12,1) ~= 110 >= 100
+    expect(hasReachedBreak(12, new Decimal(3360))).toBe(true);
   });
 
   it('reaches break sooner for a skilled player (higher average score)', () => {
-    // avg = 1500/5 = 300 -> m = 2, score(5,2) klar über 100
-    expect(hasReachedBreak(5, new Decimal(1500))).toBe(true);
+    // avg = 2800/5 = 560 -> m = 2, score(5,2) klar über 100
+    expect(hasReachedBreak(5, new Decimal(2800))).toBe(true);
   });
 
-  it('no longer breaks after only 2 runs for a merely competent player (Regressionstest)', () => {
-    // Vorher fälschlich schon bei ~200 Punkten/Run (m~5 statt ~1) ausgelöst.
-    // avg = 400/2 = 200 -> m = 1.33, score(2, 1.33) liegt klar unter S_break.
-    expect(hasReachedBreak(2, new Decimal(400))).toBe(false);
+  // Regressionstest für den realen Playtest-Datenpunkt (423 Punkte, erster
+  // Run ohne Upgrades, "nicht perfekt, aber relativ gut"): mit der alten
+  // Baseline (150) hätte das m≈3.3 ergeben und den Break schon bei Run 3
+  // ausgelöst (der real gemeldete Bug). Mit der neu kalibrierten Baseline
+  // (280, m≈1.51) bleibt der Break bei konstant 423 Punkten/Run bis Run 6 aus
+  // und löst bei Run 7 aus — siehe Test darunter.
+  it('no longer breaks by run 3 for the real 423-points-per-run playtest data (Regressionstest)', () => {
+    expect(hasReachedBreak(3, new Decimal(423 * 3))).toBe(false);
+  });
+
+  it('matches the recalibrated ~7-run expectation for the 423-points-per-run playtest data', () => {
+    expect(hasReachedBreak(6, new Decimal(423 * 6))).toBe(false);
+    expect(hasReachedBreak(7, new Decimal(423 * 7))).toBe(true);
   });
 });
 
@@ -70,18 +79,18 @@ describe('computeBreakProgress', () => {
   });
 
   it('grows monotonically with run count for a fixed average score', () => {
-    const early = computeBreakProgress(3, new Decimal(450)); // avg 150
-    const later = computeBreakProgress(8, new Decimal(1200)); // avg 150
+    const early = computeBreakProgress(3, new Decimal(840)); // avg 280
+    const later = computeBreakProgress(8, new Decimal(2240)); // avg 280
     expect(later).toBeGreaterThan(early);
   });
 
   it('reaches exactly 1 once the curve crosses S_break, never higher', () => {
-    // avg = 1800/12 = 150 -> m = 1, score(12,1) liegt bereits über S_break
-    expect(computeBreakProgress(12, new Decimal(1800))).toBe(1);
+    // avg = 3360/12 = 280 -> m = 1, score(12,1) liegt bereits über S_break
+    expect(computeBreakProgress(12, new Decimal(3360))).toBe(1);
   });
 
   it('stays in sync with hasReachedBreak (progress >= 1 iff broken)', () => {
-    expect(hasReachedBreak(5, new Decimal(750))).toBe(computeBreakProgress(5, new Decimal(750)) >= 1);
-    expect(hasReachedBreak(12, new Decimal(1800))).toBe(computeBreakProgress(12, new Decimal(1800)) >= 1);
+    expect(hasReachedBreak(5, new Decimal(1400))).toBe(computeBreakProgress(5, new Decimal(1400)) >= 1);
+    expect(hasReachedBreak(12, new Decimal(3360))).toBe(computeBreakProgress(12, new Decimal(3360)) >= 1);
   });
 });

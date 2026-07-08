@@ -93,11 +93,10 @@ nach dem Break, da das Rätsel dann gelöst ist. Implementiert als
 
 **Score-Formel:**
 ```
-score = Σ (treffer_i × basis_punkte × zeit_bonus_i) − (verpasste_moles × strafe)
+score = Σ (treffer_i × basis_punkte × zeit_bonus_i)
 
 basis_punkte = 10
 zeit_bonus   = clamp(2 − reaktionszeit_ms / 500, 0.5, 2)
-strafe       = 5   // pro Mole, die despawnt, ohne getroffen zu werden
 ```
 Run-Dauer **30s** (reduziert von ursprünglich geplanten 60s — 60s fühlte
 sich im Playtesting zu lang an, Spieler verlor die Motivation), mit
@@ -110,11 +109,22 @@ steigender Mole-Erscheinungsrate im Verlauf eines Runs
 > zum ersten Erreichen der Reichweite). Grund: Ein klick-basiertes
 > Treffen/Verfehlen würde ab einem gewissen Hammer-Radius keine räumliche
 > Zielgenauigkeit mehr testen und das Upgrade würde Klicks komplett
-> entwerten. Dadurch gibt es keinen "Fehlklick" mehr — die Strafe wird
-> stattdessen fällig, wenn eine Mole ihr Sichtbarkeitsfenster verpasst
-> (despawnt, ohne dass der Cursor in Reichweite kam). Das bleibt aktives
+> entwerten. Dadurch gibt es keinen "Fehlklick" mehr — eine Mole, die ihr
+> Sichtbarkeitsfenster verpasst (despawnt, ohne dass der Cursor in
+> Reichweite kam), zählt lediglich als verpasst, ohne Score-Auswirkung
+> (siehe Design-Entscheidung "Keine Strafpunkte" unten). Das bleibt aktives
 > Spielen: der Cursor muss aktiv zur richtigen von 9 Positionen bewegt
 > werden.
+
+> **Design-Entscheidung (nachträglich, mit dem Nutzer abgestimmt): Keine
+> Strafpunkte.** Ursprünglich gab es einen Score-Abzug (`strafe`) pro
+> verpasster Mole plus ein Upgrade ("Fehlerverzeihung"), das diesen Abzug
+> reduzierte. Beides wurde ersatzlos gestrichen — Strafpunkte wirkten
+> kontraproduktiv aufs Spielerlebnis (bestrafendes statt motivierendes
+> Feedback), und das gilt genreübergreifend, nicht nur für Automat 1. Der
+> Support-Boost "Slow-Motion-Charge/Extra-Leben" (Abschnitt 6) wirkt bei
+> Automat 1 seitdem proaktiv (verlängert die Mole-Sichtbarkeitsdauer) statt
+> reaktiv (Strafe erlassen).
 
 > **Hinweis (vorläufig):** `k_avg = 9.1` in Abschnitt 4 war implizit auf
 > 60s Run-Dauer kalibriert. Bei 30s halbiert sich grob die Anzahl der
@@ -137,7 +147,6 @@ SCORE_TO_CREDITS_DIVISOR = 5   // Konstante in config/balance.ts
 | Größerer Hammer | größere Hover-Reichweite, weniger verpasste Moles | 15 × 1.15^lvl |
 | Score-Multiplikator | +10 % Score pro Stufe | 20 × 1.2^lvl |
 | Verlängerte Runde | +5s Run-Dauer, max. 3 Stufen | 25 × 1.25^lvl |
-| Fehlerverzeihung | reduziert `strafe` pro verpasster Mole | 12 × 1.15^lvl |
 
 **Design-Entscheidung:** Upgrades sind überwiegend **Gameplay-Upgrades**
 (Trefferradius, Zeitfenster, Run-Dauer), nur der Score-Multiplikator ist ein

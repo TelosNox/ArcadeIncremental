@@ -4,10 +4,17 @@ import type { UIState, UIStateController } from './UIState';
 // Abschnitt 1/4/10) — Text + Fade reicht fürs Erste, Feinschliff
 // (Choreografie, visueller Polish) ist ausdrücklich spätere Aufgabe. Keine
 // Sound-Effekte (Nicht-Ziel, Abschnitt 11).
+//
+// Seit Phase 5 (HallScene) landet der Spieler nach dem Reveal in der
+// Hallen-Szene statt im Idle-Zustand von Automat 1 — onContinue übernimmt
+// den Szenenwechsel, RevealSequence kennt Phaser selbst nicht.
 export class RevealSequence {
   private readonly root: HTMLDivElement;
 
-  constructor(private readonly uiState: UIStateController) {
+  constructor(
+    private readonly uiState: UIStateController,
+    private readonly onContinue: () => void,
+  ) {
     this.root = document.createElement('div');
     this.root.style.cssText =
       'position:fixed; inset:0; display:none; align-items:center; justify-content:center; ' +
@@ -24,7 +31,10 @@ export class RevealSequence {
     const continueButton = document.createElement('button');
     continueButton.textContent = 'Weiter';
     continueButton.style.cssText = 'padding:10px 24px; font-family:monospace; cursor:pointer;';
-    continueButton.addEventListener('click', () => this.uiState.setState('idle'));
+    continueButton.addEventListener('click', () => {
+      this.uiState.setState('idle');
+      this.onContinue();
+    });
     this.root.appendChild(continueButton);
 
     document.body.appendChild(this.root);

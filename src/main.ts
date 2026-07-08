@@ -1,12 +1,16 @@
 import Phaser from 'phaser';
 import { createArcadeBridge } from './arcade/PhaserBridge';
 import { WhackAMoleScene } from './arcade/machines/machine01-whackamole/WhackAMoleScene';
+import { ShooterScene } from './arcade/machines/machine02-shooter/ShooterScene';
 import { Decimal } from './core/BigNumber';
 import { GameLoop } from './core/GameLoop';
+import { HallScene } from './hall/HallScene';
 import { SaveManager } from './persistence/SaveManager';
 import { createInitialGameState } from './state/GameState';
 import { StateStore } from './state/StateStore';
 import { formatNumber } from './ui/formatNumber';
+import { HallContextMenu } from './ui/HallContextMenu';
+import { HallPanel } from './ui/HallPanel';
 import { RevealSequence } from './ui/RevealSequence';
 import { UIStateController } from './ui/UIState';
 import { UpgradePanel } from './ui/UpgradePanel';
@@ -28,30 +32,54 @@ loop.onTick((deltaMs, timestamp) => {
 });
 loop.start();
 
-// Phase 2/3: Automat 1 (Whac-a-Mole) mit Upgrades, Break-Bedingung und
-// Reveal-Platzhalter (noch ohne passive Automatisierung/Effizienz-Anzeige —
-// das bleibt Phase 3). Die Scene kennt den StateStore nicht direkt, sondern
-// liest/schreibt ausschließlich über die ArcadeBridge (CLAUDE.md,
-// Architektur-Regel 1). UpgradePanel/RevealSequence sind DOM-Overlays und
-// bekommen den Store direkt (wie main.ts selbst weiter unten), da sie keine
-// Phaser-Scene sind und Regel 1 nicht für sie gilt.
+// Phase 2/3/5: Automat 1 (Whac-a-Mole) und Automat 2 (Shooter) mit Upgrades,
+// Break-Bedingung (nur Automat 1) und Reveal-Platzhalter (noch ohne passive
+// Automatisierung/Effizienz-Anzeige — das bleibt Phase 3/7). Scenes kennen
+// den StateStore nicht direkt, sondern lesen/schreiben ausschließlich über
+// die ArcadeBridge (CLAUDE.md, Architektur-Regel 1). Die HallScene liegt im
+// Hallen-Layer (SPECIFICATION.md Abschnitt 2: "Konsument des State Store für
+// Meta-Progression") und bekommt den Store wie die DOM-Overlays direkt.
 const uiState = new UIStateController();
 const bridge = createArcadeBridge(store);
 
-new Phaser.Game({
+const upgradePanel = new UpgradePanel(store, uiState);
+const hallPanel = new HallPanel(store);
+
+// hallSceneRef löst die Zirkularität HallContextMenu <-> HallScene: das Menü
+// braucht einen Szenenwechsel-Callback, die Szene braucht das fertig gebaute
+// Menü. Der Callback feuert erst nach vollständiger Konstruktion beider.
+let hallSceneRef: HallScene;
+const hallContextMenu = new HallContextMenu(store, upgradePanel, (sceneKey) => hallSceneRef.scene.start(sceneKey));
+const hallScene = new HallScene(store, hallContextMenu, hallPanel);
+hallSceneRef = hallScene;
+
+const whackAMoleScene = new WhackAMoleScene(bridge, uiState, () => upgradePanel.open(1));
+const shooterScene = new ShooterScene(bridge, uiState, () => upgradePanel.open(2));
+
+// Seit Phase 5 landet der Spieler nach dem Reveal in der HallScene statt im
+// Idle-Zustand von Automat 1 (mit dem Nutzer abgestimmt).
+new RevealSequence(uiState, () => whackAMoleScene.scene.start('HallScene'));
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'app',
   width: 800,
   height: 600,
   backgroundColor: '#1a1a1a',
-  scene: new WhackAMoleScene(bridge, uiState),
 });
 
-new UpgradePanel(store, uiState);
-new RevealSequence(uiState);
+// Startszene hängt vom geladenen Save ab: vor dem Break beginnt der Spieler
+// blind in Automat 1 (Blind/Reveal-Twist, SPECIFICATION.md Abschnitt 1);
+// danach ist die Halle der Standardort, aus dem heraus Automaten betreten
+// werden (mit dem Nutzer abgestimmt, Phase 5).
+const startInHall = initialState.machine01HasBroken;
+game.scene.add('WhackAMoleScene', whackAMoleScene, !startInHall);
+game.scene.add('ShooterScene', shooterScene, false);
+game.scene.add('HallScene', hallScene, startInHall);
 
 let lastLoggedCredits = store.getState().hallCredits;
 let lastLoggedReflexPunkte = store.getState().reflexPunkte;
+let lastLoggedAbschuesse = store.getState().abschuesse;
 store.subscribe((state) => {
   if (!state.hallCredits.eq(lastLoggedCredits)) {
     lastLoggedCredits = state.hallCredits;
@@ -60,6 +88,10 @@ store.subscribe((state) => {
   if (!state.reflexPunkte.eq(lastLoggedReflexPunkte)) {
     lastLoggedReflexPunkte = state.reflexPunkte;
     console.log(`[StateStore] reflexPunkte = ${formatNumber(state.reflexPunkte)}`);
+  }
+  if (!state.abschuesse.eq(lastLoggedAbschuesse)) {
+    lastLoggedAbschuesse = state.abschuesse;
+    console.log(`[StateStore] abschuesse = ${formatNumber(state.abschuesse)}`);
   }
 });
 
@@ -71,29 +103,47 @@ store.subscribe((state) => {
 let lastPersisted = {
   hallCredits: store.getState().hallCredits,
   reflexPunkte: store.getState().reflexPunkte,
+  abschuesse: store.getState().abschuesse,
   machine01Upgrades: store.getState().machine01Upgrades,
   machine01RunCount: store.getState().machine01RunCount,
   machine01TotalScore: store.getState().machine01TotalScore,
   machine01HasBroken: store.getState().machine01HasBroken,
+  machine02Upgrades: store.getState().machine02Upgrades,
+  unlockedMachines: store.getState().unlockedMachines,
+  hallUpgrades: store.getState().hallUpgrades,
+  machine01SupportBoosts: store.getState().machine01SupportBoosts,
+  machine02SupportBoosts: store.getState().machine02SupportBoosts,
 };
 store.subscribe((state) => {
   const changed =
     state.hallCredits !== lastPersisted.hallCredits ||
     state.reflexPunkte !== lastPersisted.reflexPunkte ||
+    state.abschuesse !== lastPersisted.abschuesse ||
     state.machine01Upgrades !== lastPersisted.machine01Upgrades ||
     state.machine01RunCount !== lastPersisted.machine01RunCount ||
     state.machine01TotalScore !== lastPersisted.machine01TotalScore ||
-    state.machine01HasBroken !== lastPersisted.machine01HasBroken;
+    state.machine01HasBroken !== lastPersisted.machine01HasBroken ||
+    state.machine02Upgrades !== lastPersisted.machine02Upgrades ||
+    state.unlockedMachines !== lastPersisted.unlockedMachines ||
+    state.hallUpgrades !== lastPersisted.hallUpgrades ||
+    state.machine01SupportBoosts !== lastPersisted.machine01SupportBoosts ||
+    state.machine02SupportBoosts !== lastPersisted.machine02SupportBoosts;
   if (!changed) {
     return;
   }
   lastPersisted = {
     hallCredits: state.hallCredits,
     reflexPunkte: state.reflexPunkte,
+    abschuesse: state.abschuesse,
     machine01Upgrades: state.machine01Upgrades,
     machine01RunCount: state.machine01RunCount,
     machine01TotalScore: state.machine01TotalScore,
     machine01HasBroken: state.machine01HasBroken,
+    machine02Upgrades: state.machine02Upgrades,
+    unlockedMachines: state.unlockedMachines,
+    hallUpgrades: state.hallUpgrades,
+    machine01SupportBoosts: state.machine01SupportBoosts,
+    machine02SupportBoosts: state.machine02SupportBoosts,
   };
   saveManager.save(state);
 });
